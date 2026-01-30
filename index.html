@@ -6,84 +6,109 @@
   <title>帳本設定</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; text-align: center; }
-    button { padding: 10px 20px; font-size: 16px; background: #06c755; color: white; border: none; border-radius: 5px; margin-top: 10px; }
-    .status { margin-top: 10px; color: #666; font-size: 14px; word-break: break-all; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; text-align: center; background-color: #f8f9fa; }
+    .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { color: #06c755; margin-bottom: 20px; }
+    .btn { display: block; width: 100%; padding: 12px; margin-top: 15px; background: #06c755; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn:disabled { background: #ccc; }
+    .status { margin-top: 15px; color: #666; font-size: 13px; word-break: break-all; min-height: 20px; }
+    .data-box { background: #f1f1f1; padding: 10px; border-radius: 8px; margin-top: 15px; text-align: left; font-size: 14px; display: none; }
   </style>
 </head>
 <body>
-  <h2>⚙️ 帳本設定 (GitHub版)</h2>
-  <div id="status">準備中...</div>
-  <div id="data-area" style="margin-top:20px; font-weight:bold;"></div>
-  <button id="actionBtn" style="display:none;" onclick="saveTest()">測試儲存</button>
 
-  <script>
-    // 👇 填入你的資料 👇
-    const MY_LIFF_ID = '2009010836-1OaNzGM2'; 
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyg1m3O5c9SjDhAbGIPFd1AAZyiTtwpc5IqWcJ8fXQZND3ghJqX2hDtTL53Y4ZkB9fi/exec';
+<div class="container">
+  <h2>⚙️ 帳本設定</h2>
+  
+  <div id="status" class="status">正在啟動 LIFF...</div>
+  
+  <div id="result-area" class="data-box">
+    <p><strong>名稱：</strong><span id="ledgerName">讀取中...</span></p>
+    <p><strong>ID：</strong><span id="uidDisplay">...</span></p>
+  </div>
 
-    const statusEl = document.getElementById('status');
-    let currentUserId = '';
+  <button id="retryBtn" class="btn" onclick="location.reload()" style="display:none; background:#888;">重試</button>
+</div>
 
-    function log(msg) { statusEl.innerText = msg; console.log(msg); }
+<script>
+  // ✅ 這是你剛剛給的正確網址 (已去除所有隱形字元)
+  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyg1m3O5c9SjDhAbGIPFd1AAZyiTtwpc5IqWcJ8fXQZND3ghJqX2hDtTL53Y4ZkB9fi/exec';
+  
+  // ✅ 你的 LIFF ID
+  const MY_LIFF_ID = '2009010836-1OaNzGM2';
 
-    async function main() {
-      try {
-        log('1. 初始化 LIFF...');
-        await liff.init({ liffId: MY_LIFF_ID });
+  const statusEl = document.getElementById('status');
+  const resultArea = document.getElementById('result-area');
+  const retryBtn = document.getElementById('retryBtn');
 
-        if (!liff.isLoggedIn()) {
-          log('未登入，跳轉中...');
-          liff.login({ redirectUri: location.href }); // 這裡可以用 location.href 了！
-          return;
-        }
+  function log(msg) { statusEl.innerText = msg; console.log(msg); }
+  function showError(msg) { 
+    statusEl.innerHTML = `<span style="color:red">❌ ${msg}</span>`; 
+    retryBtn.style.display = 'block';
+  }
 
-        const profile = await liff.getProfile();
-        currentUserId = profile.userId;
-        log('✅ 登入成功：' + profile.displayName);
-        
-        // 呼叫 GAS API
-        loadDataFromGAS(currentUserId);
+  async function main() {
+    try {
+      // 1. 初始化
+      await liff.init({ liffId: MY_LIFF_ID });
 
-      } catch (err) {
-        log('❌ 錯誤: ' + err.message);
+      // 2. 登入檢查
+      if (!liff.isLoggedIn()) {
+        log('未登入，正在跳轉...');
+        liff.login({ redirectUri: location.href });
+        return;
       }
-    }
 
-    // 改用 fetch 呼叫 GAS
-    function loadDataFromGAS(uid) {
-      log('正在呼叫 GAS API...');
+      const profile = await liff.getProfile();
+      log('✅ 登入成功，正在讀取資料...');
       
-      fetch(GAS_API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'getLedgerConfig', userId: uid }),
-        // ⚠️ GAS 不需要 Content-Type header，加了有時候會跨域失敗，用預設就好
-      })
-      .then(res => res.json())
-      .then(json => {
-        if(json.success) {
-          log('✅ 讀取成功！');
-          document.getElementById('data-area').innerText = '帳本名稱：' + json.ledgerName;
-          document.getElementById('actionBtn').style.display = 'inline-block';
-        } else {
-          log('❌ 後端回傳錯誤: ' + json.error);
-        }
-      })
-      .catch(err => log('❌ Fetch 失敗: ' + err));
-    }
+      // 顯示 ID (除錯用)
+      document.getElementById('uidDisplay').innerText = profile.userId;
+      
+      // 3. 呼叫 GAS API
+      fetchData(profile.userId);
 
-    function saveTest() {
-      log('儲存中...');
-      fetch(GAS_API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'saveLedgerConfig', userId: currentUserId, data: { text: 'test' } })
-      })
-      .then(res => res.json())
-      .then(json => log('✅ ' + json.message))
-      .catch(err => log('❌ 儲存失敗'));
+    } catch (err) {
+      showError('LIFF 初始化失敗: ' + err.message);
     }
+  }
 
-    main();
-  </script>
+  function fetchData(uid) {
+    // 準備傳給 GAS 的資料
+    const payload = {
+      action: 'getLedgerConfig',
+      userId: uid
+    };
+
+    fetch(GAS_API_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      mode: 'cors' // 確保跨域請求
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        log('✅ 資料讀取成功！');
+        resultArea.style.display = 'block';
+        document.getElementById('ledgerName').innerText = data.ledgerName || '未命名帳本';
+      } else {
+        showError('後端錯誤: ' + (data.error || '未知原因'));
+      }
+    })
+    .catch(err => {
+      // 這裡如果還報錯，通常是 GAS 部署沒更新，或是跨域標頭沒設對
+      showError('連線失敗: ' + err.message);
+      
+      // 如果是 SyntaxError，印出網址檢查
+      if (err.name === 'SyntaxError') {
+         alert("網址解析錯誤，請檢查 Code.gs 是否回傳正確 JSON");
+      }
+    });
+  }
+
+  // 啟動程式
+  main();
+</script>
+
 </body>
 </html>
