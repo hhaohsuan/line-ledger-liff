@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>帳本設定</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; text-align: center; }
+    button { padding: 10px 20px; font-size: 16px; background: #06c755; color: white; border: none; border-radius: 5px; margin-top: 10px; }
+    .status { margin-top: 10px; color: #666; font-size: 14px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h2>⚙️ 帳本設定 (GitHub版)</h2>
+  <div id="status">準備中...</div>
+  <div id="data-area" style="margin-top:20px; font-weight:bold;"></div>
+  <button id="actionBtn" style="display:none;" onclick="saveTest()">測試儲存</button>
+
+  <script>
+    // 👇 填入你的資料 👇
+    const MY_LIFF_ID = '2009010836-1OaNzGM2'; 
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyg1m3O5c9SjDhAbGIPFd1AAZyiTtwpc5IqWcJ8fXQZND3ghJqX2hDtTL53Y4ZkB9fi/exec';
+
+    const statusEl = document.getElementById('status');
+    let currentUserId = '';
+
+    function log(msg) { statusEl.innerText = msg; console.log(msg); }
+
+    async function main() {
+      try {
+        log('1. 初始化 LIFF...');
+        await liff.init({ liffId: MY_LIFF_ID });
+
+        if (!liff.isLoggedIn()) {
+          log('未登入，跳轉中...');
+          liff.login({ redirectUri: location.href }); // 這裡可以用 location.href 了！
+          return;
+        }
+
+        const profile = await liff.getProfile();
+        currentUserId = profile.userId;
+        log('✅ 登入成功：' + profile.displayName);
+        
+        // 呼叫 GAS API
+        loadDataFromGAS(currentUserId);
+
+      } catch (err) {
+        log('❌ 錯誤: ' + err.message);
+      }
+    }
+
+    // 改用 fetch 呼叫 GAS
+    function loadDataFromGAS(uid) {
+      log('正在呼叫 GAS API...');
+      
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getLedgerConfig', userId: uid }),
+        // ⚠️ GAS 不需要 Content-Type header，加了有時候會跨域失敗，用預設就好
+      })
+      .then(res => res.json())
+      .then(json => {
+        if(json.success) {
+          log('✅ 讀取成功！');
+          document.getElementById('data-area').innerText = '帳本名稱：' + json.ledgerName;
+          document.getElementById('actionBtn').style.display = 'inline-block';
+        } else {
+          log('❌ 後端回傳錯誤: ' + json.error);
+        }
+      })
+      .catch(err => log('❌ Fetch 失敗: ' + err));
+    }
+
+    function saveTest() {
+      log('儲存中...');
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'saveLedgerConfig', userId: currentUserId, data: { text: 'test' } })
+      })
+      .then(res => res.json())
+      .then(json => log('✅ ' + json.message))
+      .catch(err => log('❌ 儲存失敗'));
+    }
+
+    main();
+  </script>
+</body>
+</html>
