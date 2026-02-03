@@ -75,74 +75,63 @@
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  // 🔴 這裡請填入正確資訊
   const MY_LIFF_ID = "2009010836-1OaNzGM2"; 
-  // 👇 請務必確認這裡是你 GAS 部署後拿到的 /exec 網址
   const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec"; 
 
   var store = { m: [], p: [], c: [] };
   var currentUserId = "";
 
   window.onload = function() {
-    // 顯示除錯訊息
     document.getElementById('loading-text').innerText = "啟動 LIFF...";
-    
-    liff.init({ liffId: MY_LIFF_ID })
-      .then(() => {
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
+    liff.init({ liffId: MY_LIFF_ID }).then(() => {
+        if (!liff.isLoggedIn()) { liff.login(); return; }
         liff.getProfile().then(profile => {
           currentUserId = profile.userId;
           document.getElementById('loading-text').innerText = "正在讀取 Google Sheet...";
           fetchData(currentUserId);
         });
-      })
-      .catch(err => {
-         alert("LIFF 初始化失敗: " + err);
-         document.getElementById('loading-text').innerText = "錯誤: " + err;
-      });
+    }).catch(err => { alert("LIFF 初始化失敗: " + err); });
   };
 
   function fetchData(uid) {
-    // 🔥 修正重點 1: 使用 text/plain 避開 CORS 檢查
     fetch(GAS_API_URL, {
       method: 'POST',
-      redirect: "follow", // ✅ 必須加這個，因為 GAS 會轉址
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8", // ✅ 改成純文字
-      },
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: 'getSettings', userId: uid })
     })
-    .then(res => res.json())
-    .then(res => {
-      if (res.success) {
-        var d = res.data;
-        store.m = d.members || [];
-        store.p = d.payments || [];
-        store.c = d.categories || [];
-        
-        document.getElementById('ledger-title').innerText = d.ledgerName;
-        document.getElementById('currency').value = d.currency;
-        document.getElementById('rate').value = d.rate;
-        
-        render('members-list', store.m);
-        render('payments-list', store.p);
-        render('categories-list', store.c);
-        
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('main-ui').style.display = 'block';
-        document.getElementById('save-btn').style.display = 'block';
-      } else {
-        alert("讀取失敗: " + res.error);
+    .then(response => response.text()) // 🔥 改成先讀成純文字
+    .then(text => {
+      // 嘗試解析 JSON
+      try {
+        const res = JSON.parse(text); // 手動解析
+        if (res.success) {
+          var d = res.data;
+          store.m = d.members || [];
+          store.p = d.payments || [];
+          store.c = d.categories || [];
+          
+          document.getElementById('ledger-title').innerText = d.ledgerName;
+          document.getElementById('currency').value = d.currency;
+          document.getElementById('rate').value = d.rate;
+          
+          render('members-list', store.m);
+          render('payments-list', store.p);
+          render('categories-list', store.c);
+          
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('main-ui').style.display = 'block';
+          document.getElementById('save-btn').style.display = 'block';
+        } else {
+          alert("讀取失敗: " + res.error);
+        }
+      } catch (e) {
+        // 如果解析失敗，把回傳的內容印出來看，通常是 GAS 報錯的 HTML
+        console.error("解析失敗，原始回應:", text);
+        alert("資料格式錯誤 (非 JSON)。\n請確認你的測試帳號已經綁定表單且選定帳本。\n原始回應開頭: " + text.substring(0, 50));
       }
     })
-    .catch(err => {
-      // 顯示更詳細的錯誤
-      alert("連線錯誤 (Fetch): " + err);
-      console.error(err);
-    });
+    .catch(err => alert("連線錯誤: " + err));
   }
 
   function save() {
@@ -154,34 +143,30 @@
     var finalCurrency = map[currencyInput] || currencyInput.toUpperCase();
 
     var payload = {
-       members: store.m,
-       payments: store.p,
-       categories: store.c,
-       currency: finalCurrency,
-       rate: document.getElementById('rate').value
+       members: store.m, payments: store.p, categories: store.c,
+       currency: finalCurrency, rate: document.getElementById('rate').value
     };
 
-    // 🔥 修正重點 2: 儲存時也一樣要改
     fetch(GAS_API_URL, {
       method: 'POST',
-      redirect: "follow", // ✅ 必須加
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8", // ✅ 必須改
-      },
-      body: JSON.stringify({ 
-        action: 'saveSettings', 
-        userId: currentUserId,
-        data: payload
-      })
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: 'saveSettings', userId: currentUserId, data: payload })
     })
-    .then(res => res.json())
-    .then(res => {
-       if(res.success) {
-          alert("✅ 設定已儲存！");
-          liff.closeWindow();
-       } else {
-          alert("❌ 失敗: " + res.error);
-          btn.disabled = false; btn.innerText = "💾 儲存設定";
+    .then(response => response.text()) // 🔥 改成先讀成純文字
+    .then(text => {
+       try {
+         const res = JSON.parse(text);
+         if(res.success) {
+            alert("✅ 設定已儲存！");
+            liff.closeWindow();
+         } else {
+            alert("❌ 失敗: " + res.error);
+            btn.disabled = false; btn.innerText = "💾 儲存設定";
+         }
+       } catch (e) {
+         alert("儲存回傳格式錯誤: " + text.substring(0, 50));
+         btn.disabled = false; btn.innerText = "💾 儲存設定";
        }
     })
     .catch(err => {
@@ -213,4 +198,5 @@
 </script>
 </body>
 </html>
+
 
