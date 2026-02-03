@@ -120,7 +120,7 @@
       method: 'POST',
       redirect: "follow",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: 'getSettings', userId: uid })
+      body: JSON.stringify({ action: 'getLedgerConfig', userId: uid })
     })
     .then(response => response.text())
     .then(text => {
@@ -258,7 +258,7 @@
       method: 'POST',
       redirect: "follow",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: 'saveSettings', userId: currentUserId, data: payload })
+      body: JSON.stringify({ action: 'saveLedgerConfig', userId: currentUserId, data: payload })
     })
     .then(response => response.text())
     .then(text => {
@@ -304,3 +304,4 @@
 </script>
 </body>
 </html>
+
