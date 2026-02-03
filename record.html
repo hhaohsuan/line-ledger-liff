@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>記帳</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #f2f2f7; color: #333; margin: 0; padding: 0; }
+    .header { background: #06c755; color: white; padding: 15px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 10; }
+    .container { padding: 15px; max-width: 600px; margin: 0 auto; padding-bottom: 80px;}
+    .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    label { display: block; font-size: 13px; color: #8e8e93; margin-bottom: 8px; font-weight: 500; }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fff; -webkit-appearance: none; }
+    input:focus, select:focus, textarea:focus { border-color: #06c755; outline: none; }
+    .row { display: flex; gap: 10px; margin-bottom: 15px; }
+    .col { flex: 1; }
+    .amount-input { font-size: 28px; font-weight: bold; color: #06c755; text-align: right; letter-spacing: 1px; border: 2px solid #06c755; }
+    .btn-submit { background: #06c755; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-size: 18px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+    .btn-submit:disabled { background: #ccc; }
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index: 999; flex-direction: column;}
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="loading" class="loading-overlay">
+  <div style="font-size: 40px;">⏳</div>
+  <div style="margin-top:10px; color:#666;">讀取資料中...</div>
+</div>
+
+<div class="header" id="pageTitle">記帳</div>
+
+<div class="container">
+  <form id="recordForm">
+    <div class="card">
+      <div class="row">
+         <div class="col" style="flex:1;">
+            <label>幣別</label>
+            <input type="text" id="currency" readonly style="background:#f9f9f9; text-align:center; color:#555;">
+         </div>
+         <div class="col" style="flex:2;">
+            <label>💰 金額</label>
+            <input type="number" step="0.01" id="amount" class="amount-input" placeholder="0" required inputmode="decimal">
+         </div>
+      </div>
+      <div class="row">
+        <div class="col">
+           <label>🛍️ 項目名稱</label>
+           <input type="text" id="item" placeholder="例如：午餐、Grab" required>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>📅 日期</label>
+          <input type="date" id="date">
+        </div>
+        <div class="col">
+          <label>⏰ 時間</label>
+          <input type="time" id="time">
+        </div>
+      </div>
+
+      <div class="row">
+         <div class="col">
+           <label>💳 付款方式</label>
+           <select id="paymentMethod"></select>
+         </div>
+         <div class="col">
+           <label>📂 分類</label>
+           <select id="category"></select>
+         </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+           <label>👤 先付錢的人</label>
+           <select id="payer"></select>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col">
+           <label>🍰 如何分帳 (留空=均分)</label>
+           <input type="text" id="split" placeholder="例如：軒50, 睿50">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>📝 備註</label>
+      <textarea id="note" rows="2" placeholder="選填"></textarea>
+    </div>
+
+    <button type="button" class="btn-submit" onclick="submitForm()">儲存</button>
+  </form>
+</div>
+
+<script>
+  // 🔴 🔴 🔴 重要：請填入你的 GAS 部署網址 (以 /exec 結尾) 🔴 🔴 🔴
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec";
+  
+  // 填入你新的 LIFF ID (讓關閉視窗功能更穩定)
+  const LIFF_ID = "2009010836-bedIz9Jo"; 
+
+  // 解析網址參數
+  const urlParams = new URLSearchParams(window.location.search);
+  const userId = urlParams.get('uid');
+  const rowId = urlParams.get('row');
+  
+  if(rowId) document.getElementById('pageTitle').innerText = "✏️ 修改記帳";
+  else document.getElementById('pageTitle').innerText = "📝 新增記帳";
+
+  // 初始化
+  window.onload = async function() {
+    // 初始化 LIFF (為了能正常關閉視窗)
+    try {
+        await liff.init({ liffId: LIFF_ID });
+    } catch (err) {
+        console.log('LIFF init failed', err);
+    }
+
+    if (!userId) { 
+        alert("❌ 錯誤：網址缺少 User ID"); 
+        document.getElementById('loading').innerHTML = "❌ 網址錯誤<br>缺少 User ID";
+        return; 
+    }
+    
+    // 1. 載入設定 (成員、分類等)
+    await loadConfig();
+
+    // 2. 如果是修改模式，載入該筆資料
+    if (rowId) {
+       await loadExpenseData();
+    } else {
+       // 新增模式：設定預設時間
+       setDefaultTime();
+       document.getElementById('loading').classList.add('hidden');
+    }
+  };
+
+  function setDefaultTime() {
+      const now = new Date();
+      // 調整時區 (簡單處理，假設使用者在當地)
+      const local = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+      document.getElementById('date').value = local.toISOString().split('T')[0];
+      document.getElementById('time').value = local.toISOString().split('T')[1].slice(0,5);
+  }
+
+  // 呼叫 GAS API 取得設定
+  async function loadConfig() {
+      try {
+        const res = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getLedgerConfig", userId: userId })
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+            const data = json.data;
+            populateSelect('paymentMethod', data.paymentMethods, data.defaultPayment);
+            populateSelect('category', data.categories, "其他");
+            populateSelect('payer', data.members, data.members[0]);
+            document.getElementById('currency').value = data.defaultCurrency;
+        }
+      } catch (e) { alert("載入設定失敗: " + e); }
+  }
+
+  // 呼叫 GAS API 取得單筆資料
+  async function loadExpenseData() {
+      try {
+        const res = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getExpenseRow", userId: userId, row: rowId })
+        });
+        const json = await res.json();
+        if (json.success) {
+            const d = json.data; 
+            
+            // 時間處理
+            const dt = new Date(d[0]);
+            const local = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000));
+            document.getElementById('date').value = local.toISOString().split('T')[0];
+            document.getElementById('time').value = local.toISOString().split('T')[1].slice(0,5);
+
+            document.getElementById('item').value = d[1];
+            document.getElementById('category').value = d[2];
+            document.getElementById('amount').value = d[3];
+            document.getElementById('currency').value = d[4];
+            document.getElementById('paymentMethod').value = d[5];
+            document.getElementById('payer').value = d[7];
+            document.getElementById('split').value = d[8];
+            document.getElementById('note').value = d[9];
+        }
+        document.getElementById('loading').classList.add('hidden');
+      } catch (e) { alert("讀取資料失敗: " + e); }
+  }
+
+  function populateSelect(id, options, defValue) {
+      const sel = document.getElementById(id);
+      sel.innerHTML = "";
+      options.forEach(opt => {
+          const el = document.createElement("option");
+          el.value = opt;
+          el.text = opt;
+          if (opt == defValue) el.selected = true;
+          sel.appendChild(el);
+      });
+  }
+
+  // 送出表單
+  async function submitForm() {
+      const btn = document.querySelector('.btn-submit');
+      const item = document.getElementById('item').value;
+      const amount = document.getElementById('amount').value;
+      if(!item || !amount) { alert("請填寫項目和金額！"); return; }
+
+      btn.disabled = true;
+      btn.innerText = "💾 儲存中...";
+
+      const formData = {
+          date: document.getElementById('date').value,
+          time: document.getElementById('time').value,
+          item: item,
+          amount: amount,
+          currency: document.getElementById('currency').value,
+          paymentMethod: document.getElementById('paymentMethod').value,
+          category: document.getElementById('category').value,
+          payer: document.getElementById('payer').value,
+          split: document.getElementById('split').value,
+          note: document.getElementById('note').value
+      };
+
+      try {
+          const res = await fetch(GAS_API_URL, {
+              method: 'POST',
+              body: JSON.stringify({ 
+                  action: "saveExpense", 
+                  userId: userId, 
+                  row: rowId, 
+                  data: formData 
+              })
+          });
+          const json = await res.json();
+          if (json.success) {
+              alert("✅ 儲存成功！");
+              if (liff.isInClient()) {
+                  liff.closeWindow();
+              } else {
+                  window.close();
+              }
+          } else {
+              alert("❌ 錯誤：" + json.error);
+              btn.disabled = false;
+              btn.innerText = "儲存";
+          }
+      } catch (e) {
+          alert("連線失敗：" + e);
+          btn.disabled = false;
+          btn.innerText = "儲存";
+      }
+  }
+</script>
+
+</body>
+</html>
