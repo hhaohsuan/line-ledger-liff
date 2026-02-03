@@ -2,113 +2,191 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>帳本設定</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; text-align: center; background-color: #f8f9fa; }
-    .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h2 { color: #06c755; margin-bottom: 20px; }
-    .btn { display: block; width: 100%; padding: 12px; margin-top: 15px; background: #06c755; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    .btn:disabled { background: #ccc; }
-    .status { margin-top: 15px; color: #666; font-size: 13px; word-break: break-all; min-height: 20px; }
-    .data-box { background: #f1f1f1; padding: 10px; border-radius: 8px; margin-top: 15px; text-align: left; font-size: 14px; display: none; }
+    :root { --primary: #06c755; --bg: #f2f5f8; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); padding: 15px; margin: 0; color: #333; }
+    
+    /* Loading 遮罩 */
+    #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; }
+    h2 { color: var(--primary); text-align: center; margin: 0 0 5px 0; }
+    h3 { font-size: 1rem; border-left: 4px solid var(--primary); padding-left: 8px; margin-top: 20px; }
+    
+    input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-bottom: 5px; -webkit-appearance: none;}
+    
+    .tag-box { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .tag { background: #eefcf3; padding: 6px 12px; border-radius: 20px; border: 1px solid #ccebd4; display: flex; align-items: center; font-size: 14px; }
+    .tag .rm { color: #ff5e5e; margin-left: 8px; cursor: pointer; font-weight: bold; }
+    
+    .add-row { display: flex; gap: 5px; }
+    .btn-add { background: #eee; border: none; padding: 0 15px; border-radius: 8px; cursor: pointer; font-size: 20px; color: #666;}
+    .btn-save { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: none; box-shadow: 0 4px 10px rgba(6,199,85,0.3); }
+    .btn-save:disabled { background: #ccc; box-shadow: none; }
+    
+    .hint { font-size: 12px; color: #999; margin-bottom: 5px; }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h2>⚙️ 帳本設定</h2>
-  
-  <div id="status" class="status">正在啟動 LIFF...</div>
-  
-  <div id="result-area" class="data-box">
-    <p><strong>名稱：</strong><span id="ledgerName">讀取中...</span></p>
-    <p><strong>ID：</strong><span id="uidDisplay">...</span></p>
-  </div>
-
-  <button id="retryBtn" class="btn" onclick="location.reload()" style="display:none; background:#888;">重試</button>
+<div id="loading">
+  <div class="spinner"></div>
+  <p id="loading-text" style="margin-top:15px; color:#666;">正在連線 LIFF...</p>
 </div>
 
+<div class="card" id="main-ui">
+  <h2>⚙️ 帳本設定</h2>
+  <div id="ledger-title" style="text-align:center; color:#888; margin-bottom:20px;">...</div>
+
+  <h3>成員 <span style="font-size:12px; font-weight:normal; color:#aaa">(最多13人)</span></h3>
+  <div id="members-list" class="tag-box"></div>
+  <div class="add-row">
+    <input type="text" id="new-member" placeholder="輸入名字">
+    <button type="button" class="btn-add" onclick="add('members-list', 'new-member', 13)">＋</button>
+  </div>
+
+  <h3>幣別 & 匯率</h3>
+  <div style="display:flex; gap:10px;">
+     <div style="flex:1"><input type="text" id="currency" placeholder="幣別 (如 TWD)"></div>
+     <div style="flex:1"><input type="number" id="rate" step="0.0001" placeholder="匯率"></div>
+  </div>
+  <div class="hint">* 輸入「泰銖」自動轉 THB</div>
+
+  <h3>付款方式 <span style="font-size:12px; font-weight:normal; color:#aaa">(最多6種)</span></h3>
+  <div id="payments-list" class="tag-box"></div>
+  <div class="add-row">
+    <input type="text" id="new-payment" placeholder="如 富邦J卡">
+    <button type="button" class="btn-add" onclick="add('payments-list', 'new-payment', 6)">＋</button>
+  </div>
+
+  <h3>項目分類 <span style="font-size:12px; font-weight:normal; color:#aaa">(最多8種)</span></h3>
+  <div id="categories-list" class="tag-box"></div>
+  <div class="add-row">
+    <input type="text" id="new-category" placeholder="如 交通, 住宿">
+    <button type="button" class="btn-add" onclick="add('categories-list', 'new-category', 8)">＋</button>
+  </div>
+</div>
+
+<button class="btn-save" id="save-btn" onclick="save()">💾 儲存設定</button>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  // ✅ 這是你剛剛給的正確網址 (已去除所有隱形字元)
-  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyg1m3O5c9SjDhAbGIPFd1AAZyiTtwpc5IqWcJ8fXQZND3ghJqX2hDtTL53Y4ZkB9fi/exec';
-  
-  // ✅ 你的 LIFF ID
-  const MY_LIFF_ID = '2009010836-1OaNzGM2';
+  // 🔴 這裡請填入正確資訊
+  const MY_LIFF_ID = "2009010836-1OaNzGM2"; 
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycb..../exec"; // 👈 貼上你剛剛部署拿到的網址
 
-  const statusEl = document.getElementById('status');
-  const resultArea = document.getElementById('result-area');
-  const retryBtn = document.getElementById('retryBtn');
+  var store = { m: [], p: [], c: [] };
+  var currentUserId = "";
 
-  function log(msg) { statusEl.innerText = msg; console.log(msg); }
-  function showError(msg) { 
-    statusEl.innerHTML = `<span style="color:red">❌ ${msg}</span>`; 
-    retryBtn.style.display = 'block';
-  }
-
-  async function main() {
-    try {
-      // 1. 初始化
-      await liff.init({ liffId: MY_LIFF_ID });
-
-      // 2. 登入檢查
-      if (!liff.isLoggedIn()) {
-        log('未登入，正在跳轉...');
-        liff.login({ redirectUri: location.href });
-        return;
-      }
-
-      const profile = await liff.getProfile();
-      log('✅ 登入成功，正在讀取資料...');
-      
-      // 顯示 ID (除錯用)
-      document.getElementById('uidDisplay').innerText = profile.userId;
-      
-      // 3. 呼叫 GAS API
-      fetchData(profile.userId);
-
-    } catch (err) {
-      showError('LIFF 初始化失敗: ' + err.message);
-    }
-  }
+  window.onload = function() {
+    liff.init({ liffId: MY_LIFF_ID })
+      .then(() => {
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        liff.getProfile().then(profile => {
+          currentUserId = profile.userId;
+          document.getElementById('loading-text').innerText = "正在讀取 Google Sheet...";
+          fetchData(currentUserId);
+        });
+      })
+      .catch(err => alert("LIFF 初始化失敗: " + err));
+  };
 
   function fetchData(uid) {
-    // 準備傳給 GAS 的資料
-    const payload = {
-      action: 'getLedgerConfig',
-      userId: uid
+    // 透過 API 呼叫 GAS
+    fetch(GAS_API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getSettings', userId: uid })
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        var d = res.data;
+        store.m = d.members || [];
+        store.p = d.payments || [];
+        store.c = d.categories || [];
+        
+        document.getElementById('ledger-title').innerText = d.ledgerName;
+        document.getElementById('currency').value = d.currency;
+        document.getElementById('rate').value = d.rate;
+        
+        render('members-list', store.m);
+        render('payments-list', store.p);
+        render('categories-list', store.c);
+        
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('main-ui').style.display = 'block';
+        document.getElementById('save-btn').style.display = 'block';
+      } else {
+        alert("讀取失敗: " + res.error);
+      }
+    })
+    .catch(err => alert("連線錯誤: " + err));
+  }
+
+  function save() {
+    var btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.innerText = "儲存中...";
+    
+    var currencyInput = document.getElementById('currency').value.trim();
+    // 簡單轉碼 (泰銖 -> THB)
+    var map = { "泰銖": "THB", "美金": "USD", "日幣": "JPY", "歐元": "EUR", "韓元": "KRW", "港幣": "HKD", "人民幣": "CNY", "台幣": "TWD" };
+    var finalCurrency = map[currencyInput] || currencyInput.toUpperCase();
+
+    var payload = {
+       members: store.m,
+       payments: store.p,
+       categories: store.c,
+       currency: finalCurrency,
+       rate: document.getElementById('rate').value
     };
 
     fetch(GAS_API_URL, {
       method: 'POST',
-      body: JSON.stringify(payload),
-      mode: 'cors' // 確保跨域請求
+      body: JSON.stringify({ 
+        action: 'saveSettings', 
+        userId: currentUserId,
+        data: payload
+      })
     })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        log('✅ 資料讀取成功！');
-        resultArea.style.display = 'block';
-        document.getElementById('ledgerName').innerText = data.ledgerName || '未命名帳本';
-      } else {
-        showError('後端錯誤: ' + (data.error || '未知原因'));
-      }
-    })
-    .catch(err => {
-      // 這裡如果還報錯，通常是 GAS 部署沒更新，或是跨域標頭沒設對
-      showError('連線失敗: ' + err.message);
-      
-      // 如果是 SyntaxError，印出網址檢查
-      if (err.name === 'SyntaxError') {
-         alert("網址解析錯誤，請檢查 Code.gs 是否回傳正確 JSON");
-      }
+    .then(res => res.json())
+    .then(res => {
+       if(res.success) {
+          alert("✅ 設定已儲存！");
+          liff.closeWindow();
+       } else {
+          alert("❌ 失敗: " + res.error);
+          btn.disabled = false; btn.innerText = "💾 儲存設定";
+       }
     });
   }
 
-  // 啟動程式
-  main();
+  // --- UI 邏輯 ---
+  function render(id, arr) {
+    var el = document.getElementById(id);
+    el.innerHTML = "";
+    arr.forEach(function(item, i) {
+      el.innerHTML += '<div class="tag">' + item + '<span class="rm" onclick="rm(\''+id+'\','+i+')">×</span></div>';
+    });
+  }
+  function add(id, inputId, limit) {
+    var input = document.getElementById(inputId);
+    var val = input.value.trim();
+    var key = (id==='members-list')?'m':(id==='payments-list')?'p':'c';
+    if(val && store[key].length < limit) {
+       store[key].push(val); render(id, store[key]); input.value = "";
+    }
+  }
+  function rm(id, idx) {
+    var key = (id==='members-list')?'m':(id==='payments-list')?'p':'c';
+    store[key].splice(idx, 1); render(id, store[key]);
+  }
 </script>
-
 </body>
 </html>
