@@ -77,12 +77,16 @@
 <script>
   // 🔴 這裡請填入正確資訊
   const MY_LIFF_ID = "2009010836-1OaNzGM2"; 
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycb..../exec"; // 👈 貼上你剛剛部署拿到的網址
+  // 👇 請務必確認這裡是你 GAS 部署後拿到的 /exec 網址
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec"; 
 
   var store = { m: [], p: [], c: [] };
   var currentUserId = "";
 
   window.onload = function() {
+    // 顯示除錯訊息
+    document.getElementById('loading-text').innerText = "啟動 LIFF...";
+    
     liff.init({ liffId: MY_LIFF_ID })
       .then(() => {
         if (!liff.isLoggedIn()) {
@@ -95,13 +99,20 @@
           fetchData(currentUserId);
         });
       })
-      .catch(err => alert("LIFF 初始化失敗: " + err));
+      .catch(err => {
+         alert("LIFF 初始化失敗: " + err);
+         document.getElementById('loading-text').innerText = "錯誤: " + err;
+      });
   };
 
   function fetchData(uid) {
-    // 透過 API 呼叫 GAS
+    // 🔥 修正重點 1: 使用 text/plain 避開 CORS 檢查
     fetch(GAS_API_URL, {
       method: 'POST',
+      redirect: "follow", // ✅ 必須加這個，因為 GAS 會轉址
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8", // ✅ 改成純文字
+      },
       body: JSON.stringify({ action: 'getSettings', userId: uid })
     })
     .then(res => res.json())
@@ -127,7 +138,11 @@
         alert("讀取失敗: " + res.error);
       }
     })
-    .catch(err => alert("連線錯誤: " + err));
+    .catch(err => {
+      // 顯示更詳細的錯誤
+      alert("連線錯誤 (Fetch): " + err);
+      console.error(err);
+    });
   }
 
   function save() {
@@ -135,7 +150,6 @@
     btn.disabled = true; btn.innerText = "儲存中...";
     
     var currencyInput = document.getElementById('currency').value.trim();
-    // 簡單轉碼 (泰銖 -> THB)
     var map = { "泰銖": "THB", "美金": "USD", "日幣": "JPY", "歐元": "EUR", "韓元": "KRW", "港幣": "HKD", "人民幣": "CNY", "台幣": "TWD" };
     var finalCurrency = map[currencyInput] || currencyInput.toUpperCase();
 
@@ -147,8 +161,13 @@
        rate: document.getElementById('rate').value
     };
 
+    // 🔥 修正重點 2: 儲存時也一樣要改
     fetch(GAS_API_URL, {
       method: 'POST',
+      redirect: "follow", // ✅ 必須加
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8", // ✅ 必須改
+      },
       body: JSON.stringify({ 
         action: 'saveSettings', 
         userId: currentUserId,
@@ -164,10 +183,14 @@
           alert("❌ 失敗: " + res.error);
           btn.disabled = false; btn.innerText = "💾 儲存設定";
        }
+    })
+    .catch(err => {
+       alert("儲存連線錯誤: " + err);
+       btn.disabled = false; btn.innerText = "💾 儲存設定";
     });
   }
 
-  // --- UI 邏輯 ---
+  // --- UI 邏輯 (沒變) ---
   function render(id, arr) {
     var el = document.getElementById(id);
     el.innerHTML = "";
@@ -190,3 +213,4 @@
 </script>
 </body>
 </html>
+
