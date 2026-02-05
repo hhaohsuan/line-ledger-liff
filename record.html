@@ -2,271 +2,314 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>記帳</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>新增記帳</title>
   <style>
-    body { font-family: -apple-system, sans-serif; background: #f2f2f7; color: #333; margin: 0; padding: 0; }
-    .header { background: #06c755; color: white; padding: 15px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 10; }
-    .container { padding: 15px; max-width: 600px; margin: 0 auto; padding-bottom: 80px;}
-    .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    label { display: block; font-size: 13px; color: #8e8e93; margin-bottom: 8px; font-weight: 500; }
-    input, select, textarea { width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fff; -webkit-appearance: none; }
-    input:focus, select:focus, textarea:focus { border-color: #06c755; outline: none; }
-    .row { display: flex; gap: 10px; margin-bottom: 15px; }
-    .col { flex: 1; }
-    .amount-input { font-size: 28px; font-weight: bold; color: #06c755; text-align: right; letter-spacing: 1px; border: 2px solid #06c755; }
-    .btn-submit { background: #06c755; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-size: 18px; font-weight: bold; margin-top: 10px; cursor: pointer; }
-    .btn-submit:disabled { background: #ccc; }
-    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index: 999; flex-direction: column;}
-    .hidden { display: none; }
+    /* 🎨 模仿 Lightsplit 風格配色 */
+    :root { --primary: #46b583; --bg: #f5f5f5; --text: #333; --border: #eee; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); margin: 0; padding-bottom: 80px; color: var(--text); }
+    
+    /* 頂部導航 */
+    .header { background: var(--primary); padding: 15px; color: white; text-align: center; font-weight: bold; font-size: 18px; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+    .header-icon { font-size: 20px; cursor: pointer; }
+
+    /* 區塊樣式 */
+    .section { background: white; padding: 15px; margin-bottom: 10px; }
+    .row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .row:last-child { margin-bottom: 0; }
+    
+    /* 輸入框優化 */
+    label { font-size: 12px; color: #888; display: block; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: #fff; box-sizing: border-box; -webkit-appearance: none; }
+    input:focus, select:focus { border-color: var(--primary); outline: none; }
+    
+    /* 金額與幣別特殊排版 */
+    .amount-group { display: flex; gap: 10px; }
+    .currency-select { flex: 1; }
+    .amount-input { flex: 2; font-size: 20px; font-weight: bold; color: var(--primary); text-align: right; }
+
+    /* 底部按鈕 */
+    .footer { position: fixed; bottom: 0; left: 0; width: 100%; padding: 15px; background: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); box-sizing: border-box; }
+    .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn-save:disabled { background: #ccc; }
+
+    /* 讀取遮罩 */
+    #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99; display: flex; justify-content: center; align-items: center; flex-direction: column; }
   </style>
 </head>
 <body>
 
-<div id="loading" class="loading-overlay">
-  <div style="font-size: 40px;">⏳</div>
-  <div style="margin-top:10px; color:#666;">讀取資料中...</div>
+<div id="loading">
+  <div style="color: var(--primary); font-weight:bold;">讀取中...</div>
 </div>
 
-<div class="header" id="pageTitle">記帳</div>
-
-<div class="container">
-  <form id="recordForm">
-    <div class="card">
-      <div class="row">
-         <div class="col" style="flex:1;">
-            <label>幣別</label>
-            <input type="text" id="currency" readonly style="background:#f9f9f9; text-align:center; color:#555;">
-         </div>
-         <div class="col" style="flex:2;">
-            <label>💰 金額</label>
-            <input type="number" step="0.01" id="amount" class="amount-input" placeholder="0" required inputmode="decimal">
-         </div>
-      </div>
-      <div class="row">
-        <div class="col">
-           <label>🛍️ 項目名稱</label>
-           <input type="text" id="item" placeholder="例如：午餐、Grab" required>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="row">
-        <div class="col">
-          <label>📅 日期</label>
-          <input type="date" id="date">
-        </div>
-        <div class="col">
-          <label>⏰ 時間</label>
-          <input type="time" id="time">
-        </div>
-      </div>
-
-      <div class="row">
-         <div class="col">
-           <label>💳 付款方式</label>
-           <select id="paymentMethod"></select>
-         </div>
-         <div class="col">
-           <label>📂 分類</label>
-           <select id="category"></select>
-         </div>
-      </div>
-
-      <div class="row">
-        <div class="col">
-           <label>👤 先付錢的人</label>
-           <select id="payer"></select>
-        </div>
-      </div>
-      
-      <div class="row">
-        <div class="col">
-           <label>🍰 如何分帳 (留空=均分)</label>
-           <input type="text" id="split" placeholder="例如：軒50, 睿50">
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <label>📝 備註</label>
-      <textarea id="note" rows="2" placeholder="選填"></textarea>
-    </div>
-
-    <button type="button" class="btn-submit" onclick="submitForm()">儲存</button>
-  </form>
+<div class="header">
+  <span class="header-icon" onclick="liff.closeWindow()">✕</span>
+  <span id="page-title">新增記帳</span>
+  <span class="header-icon" style="opacity:0">✕</span>
 </div>
 
+<form id="record-form">
+  <div class="section">
+    <label>日期 & 時間</label>
+    <input type="datetime-local" id="date-input" required>
+  </div>
+
+  <div class="section">
+    <div class="row">
+      <div style="flex:1">
+        <label>分類</label>
+        <select id="category-select"><option>載入中...</option></select>
+      </div>
+      <div style="flex:2">
+        <label>品項名稱</label>
+        <input type="text" id="item-input" placeholder="例如：晚餐、機票" required>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="amount-group">
+      <div class="currency-select">
+        <label>幣別</label>
+        <select id="currency-select" onchange="updateRatePlaceholder()">
+           </select>
+      </div>
+      <div class="amount-input">
+        <label>金額</label>
+        <input type="number" id="amount-input" step="0.01" placeholder="0" required>
+      </div>
+    </div>
+    <div id="rate-row" style="margin-top:10px; display:none;">
+       <label>匯率 (預設: <span id="default-rate">1</span>)</label>
+       <input type="number" id="rate-input" step="0.0001" placeholder="留空則使用預設匯率">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="row">
+      <div style="flex:1">
+        <label>誰先付錢 (付款人)</label>
+        <select id="payer-select"></select>
+      </div>
+      <div style="flex:1">
+        <label>付款方式</label>
+        <select id="payment-select"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <label>如何分 (分帳)</label>
+    <select id="split-method" onchange="onSplitChange()">
+      <option value="均分">均分 (預設)</option>
+      <option value="自訂">自訂描述...</option>
+      <option value="不填">不填 (不分帳)</option>
+    </select>
+    <input type="text" id="split-detail" placeholder="例如：軒的7、睿的12" style="display:none; margin-top:10px;">
+  </div>
+
+  <div class="section">
+    <label>備註</label>
+    <textarea id="note-input" rows="3" placeholder="備註..."></textarea>
+  </div>
+
+  <div style="height: 20px;"></div> <div class="footer">
+    <button type="button" class="btn-save" id="save-btn" onclick="submitForm()">確認儲存</button>
+  </div>
+</form>
+
+<input type="hidden" id="edit-row-index" value="">
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  // 🔴 🔴 🔴 重要：請填入你的 GAS 部署網址 (以 /exec 結尾) 🔴 🔴 🔴
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec";
-  
-  // 填入你新的 LIFF ID (讓關閉視窗功能更穩定)
-  const LIFF_ID = "2009010836-bedIz9Jo"; 
+  // 🔴 設定區
+  const LIFF_ID = "2009010836-bedIz9Jo"; // 請填入這個頁面對應的 LIFF ID
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec"; // 請填入你的 GAS 網址
 
-  // 解析網址參數
-  const urlParams = new URLSearchParams(window.location.search);
-  const userId = urlParams.get('uid');
-  const rowId = urlParams.get('row');
-  
-  if(rowId) document.getElementById('pageTitle').innerText = "✏️ 修改記帳";
-  else document.getElementById('pageTitle').innerText = "📝 新增記帳";
+  let currentSettings = {};
+  let userId = "";
 
-  // 初始化
-  window.onload = async function() {
-    // 初始化 LIFF (為了能正常關閉視窗)
-    try {
-        await liff.init({ liffId: LIFF_ID });
-    } catch (err) {
-        console.log('LIFF init failed', err);
-    }
-
-    if (!userId) { 
-        alert("❌ 錯誤：網址缺少 User ID"); 
-        document.getElementById('loading').innerHTML = "❌ 網址錯誤<br>缺少 User ID";
-        return; 
-    }
-    
-    // 1. 載入設定 (成員、分類等)
-    await loadConfig();
-
-    // 2. 如果是修改模式，載入該筆資料
-    if (rowId) {
-       await loadExpenseData();
-    } else {
-       // 新增模式：設定預設時間
-       setDefaultTime();
-       document.getElementById('loading').classList.add('hidden');
-    }
+  window.onload = function() {
+    // 1. 初始化 LIFF
+    liff.init({ liffId: LIFF_ID }).then(() => {
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+      
+      liff.getProfile().then(profile => {
+        userId = profile.userId;
+        initPage(); // 開始載入資料
+      });
+    });
   };
 
-  function setDefaultTime() {
-      const now = new Date();
-      // 調整時區 (簡單處理，假設使用者在當地)
-      const local = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
-      document.getElementById('date').value = local.toISOString().split('T')[0];
-      document.getElementById('time').value = local.toISOString().split('T')[1].slice(0,5);
-  }
+  async function initPage() {
+    // 設定預設時間為現在
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('date-input').value = now.toISOString().slice(0,16);
 
-  // 呼叫 GAS API 取得設定
-  async function loadConfig() {
-      try {
-        const res = await fetch(GAS_API_URL, {
-            method: 'POST',
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({ action: "getLedgerConfig", userId: userId })
-        });
-        const json = await res.json();
+    // 檢查網址有沒有參數 (如果是「修改」模式，會有 ?row=xxx)
+    const urlParams = new URLSearchParams(window.location.search);
+    const editRow = urlParams.get('row');
+
+    // 呼叫 GAS 取得設定 (如果是修改，順便取得該筆資料)
+    const action = editRow ? 'getEditData' : 'getSettings';
+    
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: action, userId: userId, row: editRow })
+      }).then(r => r.json());
+
+      if (res.success) {
+        // 1. 填入下拉選單 (成員、分類、付款方式)
+        renderSelect('payer-select', res.data.members);
+        renderSelect('category-select', res.data.categories);
+        renderSelect('payment-select', res.data.payments);
         
-        if (json.success) {
-            const data = json.data;
-            populateSelect('paymentMethod', data.paymentMethods, data.defaultPayment);
-            populateSelect('category', data.categories, "其他");
-            populateSelect('payer', data.members, data.members[0]);
-            document.getElementById('currency').value = data.defaultCurrency;
+        // 幣別比較特別，要包含預設匯率
+        renderCurrency(res.data.currency, res.data.rate);
+        currentSettings = res.data; // 存起來備用
+
+        // 2. 如果是「修改模式」，回填資料
+        if (editRow && res.record) {
+          fillForm(res.record);
+          document.getElementById('page-title').innerText = "編輯記帳";
+          document.getElementById('edit-row-index').value = editRow;
+        } else {
+            // 新增模式：預設付款人為第一位成員
+           if(res.data.members.length > 0) document.getElementById('payer-select').value = res.data.members[0];
         }
-      } catch (e) { alert("載入設定失敗: " + e); }
-  }
 
-  // 呼叫 GAS API 取得單筆資料
-  async function loadExpenseData() {
-      try {
-        const res = await fetch(GAS_API_URL, {
-            method: 'POST',
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({ action: "getExpenseRow", userId: userId, row: rowId })
-        });
-        const json = await res.json();
-        if (json.success) {
-            const d = json.data; 
-            
-            // 時間處理
-            const dt = new Date(d[0]);
-            const local = new Date(dt.getTime() - (dt.getTimezoneOffset() * 60000));
-            document.getElementById('date').value = local.toISOString().split('T')[0];
-            document.getElementById('time').value = local.toISOString().split('T')[1].slice(0,5);
-
-            document.getElementById('item').value = d[1];
-            document.getElementById('category').value = d[2];
-            document.getElementById('amount').value = d[3];
-            document.getElementById('currency').value = d[4];
-            document.getElementById('paymentMethod').value = d[5];
-            document.getElementById('payer').value = d[7];
-            document.getElementById('split').value = d[8];
-            document.getElementById('note').value = d[9];
-        }
-        document.getElementById('loading').classList.add('hidden');
-      } catch (e) { alert("讀取資料失敗: " + e); }
-  }
-
-  function populateSelect(id, options, defValue) {
-      const sel = document.getElementById(id);
-      sel.innerHTML = "";
-      options.forEach(opt => {
-          const el = document.createElement("option");
-          el.value = opt;
-          el.text = opt;
-          if (opt == defValue) el.selected = true;
-          sel.appendChild(el);
-      });
-  }
-
-  // 送出表單
-  async function submitForm() {
-      const btn = document.querySelector('.btn-submit');
-      const item = document.getElementById('item').value;
-      const amount = document.getElementById('amount').value;
-      if(!item || !amount) { alert("請填寫項目和金額！"); return; }
-
-      btn.disabled = true;
-      btn.innerText = "💾 儲存中...";
-
-      const formData = {
-          date: document.getElementById('date').value,
-          time: document.getElementById('time').value,
-          item: item,
-          amount: amount,
-          currency: document.getElementById('currency').value,
-          paymentMethod: document.getElementById('paymentMethod').value,
-          category: document.getElementById('category').value,
-          payer: document.getElementById('payer').value,
-          split: document.getElementById('split').value,
-          note: document.getElementById('note').value
-      };
-
-      try {
-          const res = await fetch(GAS_API_URL, {
-              method: 'POST',
-              headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify({ 
-                  action: "saveExpense", 
-                  userId: userId, 
-                  row: rowId, 
-                  data: formData 
-              })
-          });
-          const json = await res.json();
-          if (json.success) {
-              alert("✅ 儲存成功！");
-              if (liff.isInClient()) {
-                  liff.closeWindow();
-              } else {
-                  window.close();
-              }
-          } else {
-              alert("❌ 錯誤：" + json.error);
-              btn.disabled = false;
-              btn.innerText = "儲存";
-          }
-      } catch (e) {
-          alert("連線失敗：" + e);
-          btn.disabled = false;
-          btn.innerText = "儲存";
+        document.getElementById('loading').style.display = 'none';
+      } else {
+        alert("載入失敗: " + res.error);
       }
+    } catch (e) {
+      alert("連線錯誤: " + e);
+    }
+  }
+
+  // 輔助：渲染下拉選單
+  function renderSelect(id, list) {
+    const el = document.getElementById(id);
+    el.innerHTML = "";
+    (list || []).forEach(item => {
+      el.innerHTML += `<option value="${item}">${item}</option>`;
+    });
+  }
+
+  // 輔助：渲染幣別與匯率
+  function renderCurrency(defaultCurr, defaultRate) {
+    const el = document.getElementById('currency-select');
+    // 預設幣別放第一個
+    const options = [defaultCurr, "TWD", "JPY", "USD", "EUR", "THB", "CNY", "KRW"];
+    // 去除重複
+    const unique = [...new Set(options)];
+    
+    el.innerHTML = unique.map(c => `<option value="${c}">${c}</option>`).join('');
+    document.getElementById('default-rate').innerText = defaultRate;
+  }
+
+  // UI互動：切換幣別時顯示/隱藏匯率框
+  function updateRatePlaceholder() {
+    const val = document.getElementById('currency-select').value;
+    const rateRow = document.getElementById('rate-row');
+    if (val === 'TWD') {
+       rateRow.style.display = 'none';
+    } else {
+       rateRow.style.display = 'block';
+    }
+  }
+
+  // UI互動：切換分帳邏輯
+  function onSplitChange() {
+    const val = document.getElementById('split-method').value;
+    const detailInput = document.getElementById('split-detail');
+    if (val === '自訂') {
+      detailInput.style.display = 'block';
+    } else {
+      detailInput.style.display = 'none';
+      detailInput.value = ""; // 清空
+    }
+  }
+
+  // 📝 送出表單
+  function submitForm() {
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.innerText = "儲存中...";
+
+    // 組合分帳字串
+    let splitText = "";
+    const splitMethod = document.getElementById('split-method').value;
+    if (splitMethod === "不填") splitText = "";
+    else if (splitMethod === "自訂") splitText = document.getElementById('split-detail').value;
+    else splitText = ""; // 均分通常留空讓公式處理，或填入"均分"
+
+    const payload = {
+      date: document.getElementById('date-input').value,
+      category: document.getElementById('category-select').value,
+      item: document.getElementById('item-input').value,
+      amount: document.getElementById('amount-input').value,
+      currency: document.getElementById('currency-select').value,
+      rate: document.getElementById('rate-input').value, // 如果留空後端會處理
+      payer: document.getElementById('payer-select').value,
+      payment: document.getElementById('payment-select').value,
+      split: splitText,
+      note: document.getElementById('note-input').value,
+      row: document.getElementById('edit-row-index').value // 如果有值代表是修改
+    };
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveTransaction', userId: userId, data: payload })
+    })
+    .then(r => r.json())
+    .then(res => {
+       if (res.success) {
+          liff.closeWindow(); // 關閉視窗，LINE 會顯示 Flex Message
+       } else {
+          alert("儲存失敗: " + res.error);
+          btn.disabled = false; btn.innerText = "確認儲存";
+       }
+    })
+    .catch(err => {
+       alert("錯誤: " + err);
+       btn.disabled = false; btn.innerText = "確認儲存";
+    });
+  }
+
+  // 修改模式：回填資料
+  function fillForm(record) {
+     // record 格式預期為後端整理好的 JSON
+     // 日期格式轉換
+     try {
+       const d = new Date(record.date);
+       d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+       document.getElementById('date-input').value = d.toISOString().slice(0,16);
+     } catch(e) {}
+
+     document.getElementById('item-input').value = record.item;
+     document.getElementById('category-select').value = record.category;
+     document.getElementById('amount-input').value = record.amount;
+     document.getElementById('currency-select').value = record.currency;
+     document.getElementById('payment-select').value = record.method;
+     document.getElementById('payer-select').value = record.payer;
+     document.getElementById('note-input').value = record.note;
+     
+     if (record.rate && record.rate != 1) {
+        document.getElementById('rate-input').value = record.rate;
+     }
+
+     // 分帳回填邏輯
+     if (record.split) {
+        document.getElementById('split-method').value = "自訂";
+        document.getElementById('split-detail').style.display = "block";
+        document.getElementById('split-detail').value = record.split;
+     }
+     
+     updateRatePlaceholder();
   }
 </script>
-
 </body>
 </html>
