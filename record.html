@@ -403,13 +403,27 @@
 // 編輯模式回填 (升級版：支援反解自訂分帳)
   function fillForm(record) {
      document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
-    // 🔥 [關鍵修正] 處理日期回填
-     // 如果 Google Sheet 傳來的 record.date 存在，就把它轉成 input 需要的格式
+     // 🔥 [強力修復] 日期回填邏輯 (增加防呆與格式相容)
      if (record.date) {
-         let dateObj = new Date(record.date);
-         // 修正時區偏移，確保顯示的是當地時間
-         dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
-         document.getElementById('date-input').value = dateObj.toISOString().slice(0,16);
+         try {
+             // 1. 嘗試建立 Date 物件
+             let dateObj = new Date(record.date);
+
+             // 2. 如果格式錯誤 (Invalid Date)，嘗試手動修正字串格式
+             // (有些手機不支援 "2026-02-09 20:11" 這種中間有空格的，要換成 "T")
+             if (isNaN(dateObj.getTime()) && typeof record.date === 'string') {
+                 let cleanDate = record.date.replace(" ", "T").replace(/\//g, "-"); 
+                 dateObj = new Date(cleanDate);
+             }
+
+             // 3. 確認日期有效後，執行時區轉換
+             if (!isNaN(dateObj.getTime())) {
+                 dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
+                 document.getElementById('date-input').value = dateObj.toISOString().slice(0,16);
+             }
+         } catch (e) {
+             console.error("日期讀取失敗，維持顯示現在時間:", e);
+         }
      }
      document.getElementById('item-input').value = record.item;
      document.getElementById('amount-input').value = record.amount;
