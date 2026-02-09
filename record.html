@@ -85,7 +85,10 @@
     <label>金額 (可輸入運算式)</label>
     <div class="input-group">
       <span class="calc-icon">﹩</span>
-      <input type="text" id="amount-input" placeholder="0" onchange="calculateMath(this)" inputmode="decimal">
+      <input type="text" id="amount-input" placeholder="0" 
+       onchange="calculateMath(this)" 
+       onkeydown="if(event.key === 'Enter') this.blur()" 
+       inputmode="text">
     </div>
     <div id="twd-convert-row" style="margin-top: 15px; display: none;">
       <label>💳 刷卡通知台幣金額 (選填)</label>
