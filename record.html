@@ -56,6 +56,26 @@
     .split-summary { text-align: center; margin-bottom: 10px; font-size: 14px; color: #666; background: #e8f9ee; padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; }
     .status-ok { color: var(--primary); font-weight: bold; }
     .status-err { color: var(--red); font-weight: bold; }
+
+    /* --- 自製計算機樣式 --- */
+    .calc-overlay { position: fixed; bottom: -400px; left: 0; width: 100%; background: #f2f2f7; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); transition: bottom 0.3s ease-out; z-index: 100; padding-bottom: 20px; }
+    .calc-overlay.show { bottom: 0; }
+    
+    .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px; }
+    
+    .calc-btn { 
+      background: white; border: none; border-radius: 10px; font-size: 24px; padding: 15px 0; 
+      box-shadow: 0 2px 0 #b4b4b4; cursor: pointer; color: #333; font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .calc-btn:active { transform: translateY(2px); box-shadow: none; background: #e5e5e5; }
+    
+    .btn-op { background: #ffcc00; color: white; font-weight: bold; } /* 運算符號橘色 */
+    .btn-eq { background: var(--primary); color: white; grid-column: span 2; font-weight: bold; } /* 等號綠色 */
+    .btn-ac { background: #d4d4d2; color: #333; font-weight: bold; } /* 清除鍵灰色 */
+    
+    /* 讓輸入框變成唯讀的樣子，但還是像輸入框 */
+    .input-readonly { cursor: pointer; background: white !important; color: var(--primary); caret-color: transparent; }
   </style>
 </head>
 <body>
@@ -80,16 +100,49 @@
     <select id="category-select"><option>載入中...</option></select>
   </div>
 
-  <div class="card">
+<div class="card">
     <div class="currency-toggle" id="currency-box"></div>
-    <label>金額 (可輸入運算式)</label>
+
+    <label>金額</label>
     <div class="input-group">
       <span class="calc-icon">﹩</span>
-      <input type="text" id="amount-input" placeholder="0" 
-       onchange="calculateMath(this)" 
-       onkeydown="if(event.key === 'Enter') this.blur()" 
-       inputmode="text">
+      <input type="text" id="amount-input" class="input-readonly" placeholder="0" 
+             readonly onclick="openCalculator()">
     </div>
+
+    <div id="twd-convert-row" style="margin-top: 15px; display: none;">
+      <label>💳 刷卡通知台幣金額 (選填)</label>
+      <input type="number" id="amount-twd-input" placeholder="實際扣款台幣金額" style="background:#fff8e1; border-color:#ffe082;">
+    </div>
+  </div>
+
+  <div id="custom-calculator" class="calc-overlay">
+     <div class="calc-grid">
+        <button class="calc-btn btn-ac" onclick="calcAppend('AC')">AC</button>
+        <button class="calc-btn btn-ac" onclick="calcAppend('DEL')">⌫</button>
+        <button class="calc-btn btn-op" onclick="calcAppend('/')">÷</button>
+        <button class="calc-btn btn-op" onclick="calcAppend('*')">×</button>
+
+        <button class="calc-btn" onclick="calcAppend('7')">7</button>
+        <button class="calc-btn" onclick="calcAppend('8')">8</button>
+        <button class="calc-btn" onclick="calcAppend('9')">9</button>
+        <button class="calc-btn btn-op" onclick="calcAppend('-')">-</button>
+
+        <button class="calc-btn" onclick="calcAppend('4')">4</button>
+        <button class="calc-btn" onclick="calcAppend('5')">5</button>
+        <button class="calc-btn" onclick="calcAppend('6')">6</button>
+        <button class="calc-btn btn-op" onclick="calcAppend('+')">+</button>
+
+        <button class="calc-btn" onclick="calcAppend('1')">1</button>
+        <button class="calc-btn" onclick="calcAppend('2')">2</button>
+        <button class="calc-btn" onclick="calcAppend('3')">3</button>
+        
+        <button class="calc-btn btn-eq" style="grid-row: span 2;" onclick="calcDone()">OK</button>
+
+        <button class="calc-btn" style="grid-column: span 2" onclick="calcAppend('0')">0</button>
+        <button class="calc-btn" onclick="calcAppend('.')">.</button>
+     </div>
+  </div>
     <div id="twd-convert-row" style="margin-top: 15px; display: none;">
       <label>💳 刷卡通知台幣金額 (選填)</label>
       <input type="number" id="amount-twd-input" placeholder="實際扣款台幣金額" style="background:#fff8e1; border-color:#ffe082;">
@@ -495,6 +548,70 @@
      // 最後記得重新渲染列表，數值才會顯示出來
      renderSplitList();
   }
+// --- 自製計算機邏輯 ---
+  
+  // 開啟計算機
+  function openCalculator() {
+    document.getElementById('custom-calculator').classList.add('show');
+    // 如果目前金額是 0，先清空方便輸入
+    const el = document.getElementById('amount-input');
+    if(el.value === "0") el.value = "";
+  }
+
+  // 關閉計算機 (點擊背景或其他地方時可以呼叫，這裡先做在 OK 鍵裡)
+  function closeCalculator() {
+    document.getElementById('custom-calculator').classList.remove('show');
+  }
+
+  // 處理按鍵輸入
+  function calcAppend(val) {
+    const el = document.getElementById('amount-input');
+    
+    if (val === 'AC') {
+      el.value = "";
+    } else if (val === 'DEL') {
+      el.value = el.value.slice(0, -1);
+    } else {
+      // 避免重複輸入運算符號 (簡易防呆)
+      const lastChar = el.value.slice(-1);
+      const isOp = ['+','-','*','/'].includes(val);
+      if (isOp && ['+','-','*','/'].includes(lastChar)) {
+         el.value = el.value.slice(0, -1) + val; // 替換最後一個符號
+      } else {
+         el.value += val;
+      }
+    }
+  }
+
+  // 按下 OK：計算結果並更新分帳
+  function calcDone() {
+    const el = document.getElementById('amount-input');
+    try {
+      if (el.value) {
+        // 使用 Function 執行數學運算 (替代 eval)
+        // 這裡允許運算式如 100+50
+        const result = new Function('return ' + el.value)(); 
+        el.value = result;
+        
+        // 觸發原本的分帳更新邏輯
+        updateSplitMath(); 
+      }
+    } catch (e) {
+      alert("算式錯誤");
+    }
+    closeCalculator();
+  }
+
+  // 點擊畫面其他地方關閉計算機 (優化體驗)
+  document.addEventListener('click', function(e) {
+    const calc = document.getElementById('custom-calculator');
+    const input = document.getElementById('amount-input');
+    
+    // 如果點擊的不是計算機本人，也不是金額輸入框，且計算機是開著的 -> 關閉
+    if (!calc.contains(e.target) && e.target !== input && calc.classList.contains('show')) {
+      closeCalculator();
+    }
+  });
 </script>
 </body>
 </html>
