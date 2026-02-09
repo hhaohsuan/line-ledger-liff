@@ -57,24 +57,28 @@
     .status-ok { color: var(--primary); font-weight: bold; }
     .status-err { color: var(--red); font-weight: bold; }
 
-    /* --- 自製計算機樣式 --- */
-    .calc-overlay { position: fixed; bottom: -400px; left: 0; width: 100%; background: #f2f2f7; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); transition: bottom 0.3s ease-out; z-index: 100; padding-bottom: 20px; }
+/* --- 自製計算機樣式 (修正版面) --- */
+    .calc-overlay { position: fixed; bottom: -100%; left: 0; width: 100%; background: #f2f2f7; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); transition: bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1000; padding: 15px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); box-sizing: border-box; }
     .calc-overlay.show { bottom: 0; }
     
-    .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 15px; }
+    .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, 1fr); gap: 10px; height: 380px; }
     
     .calc-btn { 
-      background: white; border: none; border-radius: 10px; font-size: 24px; padding: 15px 0; 
-      box-shadow: 0 2px 0 #b4b4b4; cursor: pointer; color: #333; font-weight: 500;
+      background: white; border: none; border-radius: 12px; font-size: 24px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; color: #333; font-weight: 400;
+      display: flex; align-items: center; justify-content: center;
       -webkit-tap-highlight-color: transparent;
+      height: 100%; width: 100%;
     }
-    .calc-btn:active { transform: translateY(2px); box-shadow: none; background: #e5e5e5; }
+    .calc-btn:active { background: #e5e5e5; }
     
-    .btn-op { background: #ffcc00; color: white; font-weight: bold; } /* 運算符號橘色 */
-    .btn-eq { background: var(--primary); color: white; grid-column: span 2; font-weight: bold; } /* 等號綠色 */
-    .btn-ac { background: #d4d4d2; color: #333; font-weight: bold; } /* 清除鍵灰色 */
+    .btn-op { background: #ff9f0a; color: white; font-weight: 500; font-size: 28px; } /* 運算符號橘色 */
+    .btn-op:active { background: #e68a00; }
+    .btn-eq { background: var(--primary); color: white; font-weight: bold; grid-row: span 2; } /* OK鍵綠色 */
+    .btn-eq:active { opacity: 0.8; }
+    .btn-ac { background: #d4d4d2; color: #333; font-weight: 500; } /* 清除鍵灰色 */
+    .btn-ac:active { background: #c0c0c0; }
     
-    /* 讓輸入框變成唯讀的樣子，但還是像輸入框 */
     .input-readonly { cursor: pointer; background: white !important; color: var(--primary); caret-color: transparent; }
   </style>
 </head>
@@ -583,35 +587,36 @@
     }
   }
 
-  // 按下 OK：計算結果並更新分帳
+// 按下 OK：計算結果並更新分帳
   function calcDone() {
     const el = document.getElementById('amount-input');
     try {
       if (el.value) {
-        // 使用 Function 執行數學運算 (替代 eval)
-        // 這裡允許運算式如 100+50
-        const result = new Function('return ' + el.value)(); 
-        el.value = result;
+        // 移除可能在結尾的運算符號 (例如 "100+" -> "100")
+        let safeValue = el.value.replace(/[+\-*/]*$/, '');
+        
+        // 使用 Function 執行數學運算
+        const result = new Function('return ' + safeValue)(); 
+        
+        // 處理無限大或非數字的情況
+        if (!isFinite(result) || isNaN(result)) {
+            el.value = "0";
+        } else {
+            // 取兩位小數並轉回數字，避免精度問題
+            el.value = Math.round(result * 100) / 100;
+        }
         
         // 觸發原本的分帳更新邏輯
         updateSplitMath(); 
       }
     } catch (e) {
-      alert("算式錯誤");
+      alert("算式錯誤，請重新輸入");
+      el.value = ""; // 清空錯誤輸入
     }
+    
+    // ⚠️ 關鍵：這行一定要在最後面，負責關閉計算機面板
     closeCalculator();
   }
-
-  // 點擊畫面其他地方關閉計算機 (優化體驗)
-  document.addEventListener('click', function(e) {
-    const calc = document.getElementById('custom-calculator');
-    const input = document.getElementById('amount-input');
-    
-    // 如果點擊的不是計算機本人，也不是金額輸入框，且計算機是開著的 -> 關閉
-    if (!calc.contains(e.target) && e.target !== input && calc.classList.contains('show')) {
-      closeCalculator();
-    }
-  });
 </script>
 </body>
 </html>
