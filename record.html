@@ -31,7 +31,7 @@
     .loading-spin { display: none; width: 16px; height: 16px; border: 2px solid #ddd; border-top: 2px solid var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 10px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* --- 分帳介面優化 --- */
+    /* --- 分帳介面優化 --- */
     .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .split-tools { display: flex; gap: 10px; font-size: 12px; color: var(--primary); }
     .tool-btn { cursor: pointer; font-weight: 600; padding: 4px 8px; background: #e8f9ee; border-radius: 6px; }
@@ -44,20 +44,22 @@
     .user-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* 右側：金額輸入 */
-    .split-input-group { position: relative; width: 100px; }
+    .split-input-group { position: relative; width: 110px; }
     .split-amount { 
       width: 100% !important; 
       text-align: right; 
-      padding: 8px !important; 
+      padding: 8px 10px !important; 
       font-size: 15px !important; 
-      border: 1px solid transparent !important; /* 預設無邊框看起來像文字 */
-      background: transparent !important;
+      border: 1px solid #ddd !important; /* 加上淺灰邊框 */
+      border-radius: 8px;
+      background: #f9f9f9 !important;
       color: #333;
+      box-sizing: border-box; /* 確保邊框不撐大 */
     }
-    /* 當輸入框被選取或有值時，顯示邊框 */
-    .split-amount:focus, .split-amount.has-value { 
-      background: #f9f9f9 !important; 
-      border-color: #e1e5eb !important; 
+    .split-amount:focus { 
+      background: white !important; 
+      border-color: var(--primary) !important; 
+      outline: none;
     }
     /* 顯示自動計算的灰色字 */
     .split-amount::placeholder { color: #aaa; font-style: italic; }
@@ -68,7 +70,7 @@
     
     .avatar { width: 32px; height: 32px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #666; font-size: 13px; flex-shrink: 0; }
 
-/* --- 自製計算機樣式 (修正版面) --- */
+    /* --- 自製計算機樣式 (修正版面) --- */
     .calc-overlay { position: fixed; bottom: -100%; left: 0; width: 100%; background: #f2f2f7; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); transition: bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1000; padding: 15px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); box-sizing: border-box; }
     .calc-overlay.show { bottom: 0; }
     
@@ -91,6 +93,35 @@
     .btn-ac:active { background: #c0c0c0; }
     
     .input-readonly { cursor: pointer; background: white !important; color: var(--primary); caret-color: transparent; }
+
+    /* --- [修復] Footer 樣式 --- */
+    .footer { 
+        position: fixed; 
+        bottom: 0; 
+        left: 0; 
+        width: 100%; 
+        padding: 15px 20px; 
+        background: white; 
+        border-top: 1px solid var(--border); 
+        display: flex; 
+        box-sizing: border-box; /* 關鍵：讓 padding 包含在 width 內，防止跑版 */
+        z-index: 900; 
+        padding-bottom: calc(15px + env(safe-area-inset-bottom)); /* 避開 iPhone 底部橫條 */
+    }
+    
+    .btn-main { 
+        width: 100%; /* 強制滿版 */
+        flex: 1; 
+        background: var(--primary); 
+        color: white; 
+        border: none; 
+        padding: 15px; 
+        border-radius: 12px; 
+        font-size: 16px; 
+        font-weight: bold; 
+        cursor: pointer; 
+        box-shadow: 0 4px 12px rgba(6,199,85,0.3); 
+    }
   </style>
 </head>
 <body>
@@ -500,18 +531,17 @@
 
   // --- 分帳核心邏輯 (Hybrid Mode) ---
 
-  // 1. 渲染列表
+// 1. 渲染列表 (修復版)
   function renderSplitList() {
     const list = document.getElementById('split-list');
-    const oldHtml = list.innerHTML; // 用來記憶勾選狀態 (簡單版)
+    const oldHtml = list.innerHTML;
     list.innerHTML = "";
     
     settings.members.forEach((member, idx) => {
-      // 預設全選
       let isChecked = true;
       let existingVal = "";
 
-      // 嘗試保留使用者之前的輸入 (如果是重新渲染)
+      // 嘗試保留輸入狀態
       if (oldHtml) {
          const oldChk = document.getElementById(`chk-${idx}`);
          const oldInp = document.getElementById(`amt-${idx}`);
@@ -522,10 +552,9 @@
       const row = document.createElement('div');
       row.className = "split-row";
       const initial = member.substring(0,1);
-      
-      // 輸入框如果有值，加上 class 讓樣式顯眼一點
       const inputClass = existingVal ? "split-amount has-value" : "split-amount";
 
+      // 🔥 [修正點] 移除重複的 user-name
       row.innerHTML = `
         <div class="user-info" onclick="toggleSplitMember(${idx})">
            <div class="checkbox ${isChecked?'checked':''}" id="chk-${idx}"></div>
@@ -791,11 +820,9 @@
      updateSplitMath();
   }
 
-  // ✅ 1. 智慧型儲存函式 (混合模式：手機免費 / 電腦付費)
+// ✅ 智慧型儲存函式 (快取接力版)
   function save() {
-    // 取得處理好的分帳文字
     const splitText = getSplitText();
-
     const payload = {
       date: document.getElementById('date-input').value,
       item: document.getElementById('item-input').value,
@@ -804,10 +831,7 @@
       currency: currentCurrency,
       amountTWD: document.getElementById('amount-twd-input').value || null,
       payer: document.getElementById('payer-select').value,
-      
-      // 🛠️ 修正 BUG：這裡的 key 必須是 method，後端才收得到
       method: document.getElementById('payment-select').value, 
-      
       split: splitText,
       note: document.getElementById('note-input').value,
       row: document.getElementById('edit-row-index').value
@@ -816,24 +840,36 @@
     const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.innerText = "儲存中...";
 
-    // 判斷環境：是在 LINE App 裡面嗎？
+    // 判斷環境
     if (liff.isInClient()) {
-        // 📱 手機版：走「免費」路線 (用講話的 #CMD#)
-        const msgText = "#CMD#" + JSON.stringify(payload);
-        
-        liff.sendMessages([{
-            type: 'text',
-            text: msgText
-        }]).then(() => {
-            liff.closeWindow(); // 成功後關閉
-        }).catch((err) => {
-            console.error("發話失敗，改用 Fetch:", err);
-            // 萬一使用者沒授權發話，自動降級走 Fetch
-            sendByFetch(payload, btn);
+        // 📱 手機版：先用 Fetch 傳資料給 GAS (useCache: true)
+        fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'saveTransaction', userId: userId, data: payload, useCache: true })
+        })
+        .then(r => r.json())
+        .then(res => {
+           if(res.success) {
+               // 資料已傳給後端存快取，現在發送觸發指令
+               liff.sendMessages([{ type: 'text', text: "✅ 記帳完成" }])
+                   .then(() => liff.closeWindow())
+                   .catch(err => {
+                       // 萬一使用者沒授權發訊息，至少資料已經存了，直接關閉
+                       console.error(err);
+                       liff.closeWindow();
+                   });
+           } else {
+               alert("儲存失敗: " + res.error);
+               btn.disabled = false; btn.innerText = "確認儲存";
+           }
+        })
+        .catch(e => {
+            alert("網路錯誤: " + e);
+            btn.disabled = false; btn.innerText = "確認儲存";
         });
 
     } else {
-        // 💻 電腦版：走「Fetch」路線 (直接呼叫 GAS，消耗 Push 額度)
+        // 💻 電腦版：走原本的 Push 路線
         sendByFetch(payload, btn);
     }
   }
