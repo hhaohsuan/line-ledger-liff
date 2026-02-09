@@ -5,63 +5,81 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>記一筆</title>
   <style>
-    :root { --primary: #06c755; --bg: #f7f9fc; --text: #333; --border: #e1e5eb; --red: #ff4b4b; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: var(--text); -webkit-tap-highlight-color: transparent; }
+    /* ✅ 加上 box-sizing 解決日期欄位凸出去的問題 */
+    * { box-sizing: border-box; }
+
+    /* 定義顏色變數 (預設綠色) */
+    :root { 
+      --primary: #06c755; 
+      --primary-light: #e8f9ee;
+      --bg: #f7f9fc; 
+      --text: #333; 
+      --border: #e1e5eb; 
+      --red: #ff4b4b; 
+      --card-bg: #ffffff;
+    }
+
+    /* 藍色主題 */
+    [data-theme="blue"] { --primary: #007bff; --primary-light: #e6f2ff; }
+    /* 紫色主題 */
+    [data-theme="purple"] { --primary: #8e44ad; --primary-light: #f4ecf7; }
+    /* 暗黑模式 */
+    [data-theme="dark"] { 
+      --primary: #06c755; --primary-light: #1e3a29; 
+      --bg: #121212; --text: #e0e0e0; --border: #333; --card-bg: #1e1e1e;
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: var(--text); -webkit-tap-highlight-color: transparent; transition: background 0.3s; }
     
-    .header { background: white; padding: 15px 20px; box-shadow: 0 1px 0 var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+    /* Header 樣式優化 */
+    .header { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 1px 0 var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s; }
     .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
-    .close-btn { font-size: 24px; color: #888; cursor: pointer; line-height: 1; }
+    .icon-btn { font-size: 22px; color: #888; cursor: pointer; line-height: 1; padding: 5px; }
 
     .container { padding: 20px; max-width: 600px; margin: 0 auto; }
-    .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); transition: background 0.3s; }
     
     label { font-size: 13px; color: #888; margin-bottom: 8px; display: block; font-weight: 500; }
     
     .input-group { position: relative; display: flex; align-items: center; }
-    input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border); border-radius: 12px; background: #f9f9f9; box-sizing: border-box; transition: all 0.2s; }
-    input:focus, select:focus, textarea:focus { background: white; border-color: var(--primary); outline: none; }
+    
+    /* 輸入框樣式統一 */
+    input, select, textarea { 
+        width: 100%; padding: 12px; font-size: 16px; 
+        border: 1px solid var(--border); border-radius: 12px; 
+        background: var(--bg); color: var(--text);
+        transition: all 0.2s; appearance: none; /* 移除 iOS 預設樣式 */
+    }
+    input:focus, select:focus, textarea:focus { background: var(--card-bg); border-color: var(--primary); outline: none; }
     
     #amount-input { font-size: 28px; font-weight: bold; color: var(--primary); text-align: right; padding-right: 15px; }
     .calc-icon { position: absolute; left: 15px; color: #ccc; font-size: 20px; }
 
     .currency-toggle { display: flex; gap: 10px; margin-bottom: 15px; }
-    .c-btn { flex: 1; padding: 10px; text-align: center; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-weight: 500; color: #666; background: white; }
-    .c-btn.active { background: #e8f9ee; color: var(--primary); border-color: var(--primary); font-weight: bold; }
+    .c-btn { flex: 1; padding: 10px; text-align: center; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-weight: 500; color: #666; background: var(--card-bg); }
+    .c-btn.active { background: var(--primary-light); color: var(--primary); border-color: var(--primary); font-weight: bold; }
 
     .loading-spin { display: none; width: 16px; height: 16px; border: 2px solid #ddd; border-top: 2px solid var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 10px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* --- 分帳介面優化 --- */
-    .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    /* 分帳介面 */
+    .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
     .split-tools { display: flex; gap: 10px; font-size: 12px; color: var(--primary); }
-    .tool-btn { cursor: pointer; font-weight: 600; padding: 4px 8px; background: #e8f9ee; border-radius: 6px; }
+    .tool-btn { cursor: pointer; font-weight: 600; padding: 4px 8px; background: var(--primary-light); border-radius: 6px; }
 
-    .split-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .split-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .split-row:last-child { border-bottom: none; }
-    
-    /* 左側：核取方塊 + 頭像 + 名字 */
     .user-info { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; overflow: hidden; }
     .user-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* 右側：金額輸入 */
+    /* 分帳輸入框優化 */
     .split-input-group { position: relative; width: 110px; }
     .split-amount { 
-      width: 100% !important; 
-      text-align: right; 
-      padding: 8px 10px !important; 
-      font-size: 15px !important; 
-      border: 1px solid #ddd !important; /* 加上淺灰邊框 */
-      border-radius: 8px;
-      background: #f9f9f9 !important;
-      color: #333;
-      box-sizing: border-box; /* 確保邊框不撐大 */
+      width: 100% !important; text-align: right; padding: 8px 10px !important; font-size: 15px !important; 
+      border: 1px solid var(--border) !important; border-radius: 8px;
+      background: var(--bg) !important; color: var(--text);
     }
-    .split-amount:focus { 
-      background: white !important; 
-      border-color: var(--primary) !important; 
-      outline: none;
-    }
-    /* 顯示自動計算的灰色字 */
+    .split-amount:focus { background: var(--card-bg) !important; border-color: var(--primary) !important; }
     .split-amount::placeholder { color: #aaa; font-style: italic; }
 
     .checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
@@ -70,66 +88,32 @@
     
     .avatar { width: 32px; height: 32px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #666; font-size: 13px; flex-shrink: 0; }
 
-    /* --- 自製計算機樣式 (修正版面) --- */
-    .calc-overlay { position: fixed; bottom: -100%; left: 0; width: 100%; background: #f2f2f7; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); transition: bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1000; padding: 15px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+    /* 計算機樣式 */
+    .calc-overlay { position: fixed; bottom: -100%; left: 0; width: 100%; background: #f2f2f7; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.2); transition: bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1000; padding: 15px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
     .calc-overlay.show { bottom: 0; }
-    
     .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, 1fr); gap: 10px; height: 380px; }
-    
-    .calc-btn { 
-      background: white; border: none; border-radius: 12px; font-size: 24px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; color: #333; font-weight: 400;
-      display: flex; align-items: center; justify-content: center;
-      -webkit-tap-highlight-color: transparent;
-      height: 100%; width: 100%;
-    }
+    .calc-btn { background: white; border: none; border-radius: 12px; font-size: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; color: #333; display: flex; align-items: center; justify-content: center; height: 100%; width: 100%; }
     .calc-btn:active { background: #e5e5e5; }
-    
-    .btn-op { background: #ff9f0a; color: white; font-weight: 500; font-size: 28px; } /* 運算符號橘色 */
-    .btn-op:active { background: #e68a00; }
-    .btn-eq { background: var(--primary); color: white; font-weight: bold; grid-row: span 2; } /* OK鍵綠色 */
-    .btn-eq:active { opacity: 0.8; }
-    .btn-ac { background: #d4d4d2; color: #333; font-weight: 500; } /* 清除鍵灰色 */
-    .btn-ac:active { background: #c0c0c0; }
-    
-    .input-readonly { cursor: pointer; background: white !important; color: var(--primary); caret-color: transparent; }
+    .btn-op { background: #ff9f0a; color: white; font-weight: 500; font-size: 28px; }
+    .btn-eq { background: var(--primary); color: white; font-weight: bold; grid-row: span 2; }
+    .btn-ac { background: #d4d4d2; color: #333; font-weight: 500; }
+    .input-readonly { cursor: pointer; background: var(--card-bg) !important; color: var(--primary); caret-color: transparent; }
 
-    /* --- [修復] Footer 樣式 --- */
-    .footer { 
-        position: fixed; 
-        bottom: 0; 
-        left: 0; 
-        width: 100%; 
-        padding: 15px 20px; 
-        background: white; 
-        border-top: 1px solid var(--border); 
-        display: flex; 
-        box-sizing: border-box; /* 關鍵：讓 padding 包含在 width 內，防止跑版 */
-        z-index: 900; 
-        padding-bottom: calc(15px + env(safe-area-inset-bottom)); /* 避開 iPhone 底部橫條 */
-    }
+    /* Footer */
+    .footer { position: fixed; bottom: 0; left: 0; width: 100%; padding: 15px 20px; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; z-index: 900; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
+    .btn-main { width: 100%; flex: 1; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     
-    .btn-main { 
-        width: 100%; /* 強制滿版 */
-        flex: 1; 
-        background: var(--primary); 
-        color: white; 
-        border: none; 
-        padding: 15px; 
-        border-radius: 12px; 
-        font-size: 16px; 
-        font-weight: bold; 
-        cursor: pointer; 
-        box-shadow: 0 4px 12px rgba(6,199,85,0.3); 
-    }
+    .split-summary { text-align: center; margin-bottom: 10px; font-size: 14px; color: #666; background: var(--primary-light); padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; }
+    .status-ok { color: var(--primary); font-weight: bold; }
+    .status-err { color: var(--red); font-weight: bold; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="close-btn" onclick="liff.closeWindow()">✕</div>
+  <div class="icon-btn" onclick="liff.closeWindow()">✕</div>
   <h1>新增記帳</h1>
-  <div style="width:24px"></div>
+  <div class="icon-btn" onclick="toggleTheme()">🎨</div>
 </div>
 
 <div class="container">
@@ -146,7 +130,7 @@
     <select id="category-select"><option>載入中...</option></select>
   </div>
 
-<div class="card">
+  <div class="card">
     <div class="currency-toggle" id="currency-box"></div>
 
     <label>金額</label>
@@ -162,7 +146,39 @@
     </div>
   </div>
 
-  <div id="custom-calculator" class="calc-overlay">
+  <div class="card">
+    <label style="margin-bottom:10px; color:var(--primary); font-size:14px;">付款與分帳詳情</label>
+    
+    <div style="display:flex; gap:10px; margin-bottom: 20px;">
+      <div style="flex:1">
+        <label>先付錢的人</label>
+        <select id="payer-select"></select>
+      </div>
+      <div style="flex:1">
+        <label>付款方式</label>
+        <select id="payment-select"></select>
+      </div>
+    </div>
+
+    <div class="split-header">
+        <label style="margin:0">如何分帳</label>
+        <div class="split-tools">
+           <div class="tool-btn" onclick="resetSplit()">重置 / 全選</div>
+        </div>
+    </div>
+    
+    <div class="split-summary">
+      <span>總額: <span id="total-display">0</span></span>
+      <span id="remainder-display" class="status-ok">分配: 自動計算</span>
+    </div>
+
+    <div id="split-list"></div>
+    <textarea id="note-input" rows="2" placeholder="備註..." style="margin-top:15px;"></textarea>
+  </div>
+
+</div>
+
+<div id="custom-calculator" class="calc-overlay">
      <div class="calc-grid">
         <button class="calc-btn btn-ac" onclick="calcAppend('AC')">AC</button>
         <button class="calc-btn btn-ac" onclick="calcAppend('DEL')">⌫</button>
@@ -188,43 +204,6 @@
         <button class="calc-btn" style="grid-column: span 2" onclick="calcAppend('0')">0</button>
         <button class="calc-btn" onclick="calcAppend('.')">.</button>
      </div>
-  </div>
-    <div id="twd-convert-row" style="margin-top: 15px; display: none;">
-      <label>💳 刷卡通知台幣金額 (選填)</label>
-      <input type="number" id="amount-twd-input" placeholder="實際扣款台幣金額" style="background:#fff8e1; border-color:#ffe082;">
-    </div>
-  </div>
-
-  <div class="card">
-    <div style="display:flex; gap:10px;">
-      <div style="flex:1">
-        <label>先付錢的人</label>
-        <select id="payer-select"></select>
-      </div>
-      <div style="flex:1">
-        <label>付款方式</label>
-        <select id="payment-select"></select>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="split-header">
-        <label style="margin:0">如何分帳</label>
-        <div class="split-tools">
-           <div class="tool-btn" onclick="resetSplit()">重置 / 全選</div>
-        </div>
-    </div>
-    
-    <div class="split-summary">
-      <span>總額: <span id="total-display">0</span></span>
-      <span id="remainder-display" class="status-ok">分配: 自動計算</span>
-    </div>
-
-    <div id="split-list"></div>
-    <textarea id="note-input" rows="2" placeholder="備註..." style="margin-top:15px;"></textarea>
-  </div>
-
 </div>
 
 <div class="footer">
@@ -241,13 +220,24 @@
 
   let settings = { members: [], categories: [], payments: [], currency: "TWD" };
   let currentCurrency = "TWD";
-  let splitMode = "EVEN"; // "EVEN" (勾選) 或 "CUSTOM" (手輸)
+  let splitMode = "EVEN";
   let userId = "";
+  
+  // 🎨 主題設定
+  const themes = [null, 'blue', 'purple', 'dark']; // null = default green
+  let currentThemeIndex = 0;
 
   window.onload = function() {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('date-input').value = now.toISOString().slice(0,16);
+    // 預設時間 (先填入，避免載入期間空白)
+    setNowToDateInput();
+    
+    // 載入儲存的主題
+    const savedTheme = localStorage.getItem('app-theme');
+    if (savedTheme) {
+        document.body.setAttribute('data-theme', savedTheme);
+        currentThemeIndex = themes.indexOf(savedTheme);
+        if(currentThemeIndex === -1) currentThemeIndex = 0;
+    }
 
     liff.init({ liffId: LIFF_ID }).then(() => {
         if (!liff.isLoggedIn()) { liff.login(); return; }
@@ -257,6 +247,24 @@
         });
     });
   };
+  
+  function setNowToDateInput() {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('date-input').value = now.toISOString().slice(0,16);
+  }
+
+  function toggleTheme() {
+      currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+      const theme = themes[currentThemeIndex];
+      if (theme) {
+          document.body.setAttribute('data-theme', theme);
+          localStorage.setItem('app-theme', theme);
+      } else {
+          document.body.removeAttribute('data-theme');
+          localStorage.removeItem('app-theme');
+      }
+  }
 
   async function loadData() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -276,8 +284,7 @@
          if(editRow && res.record) fillForm(res.record);
          else {
             if(settings.members.length > 0) document.getElementById('payer-select').value = settings.members[0];
-            // 預設全選
-            toggleSelectAll(true);
+            toggleSelectAll(true); // 預設全選
          }
       }
     } catch(e) { alert("載入錯誤: " + e); }
@@ -319,15 +326,7 @@
     document.getElementById('twd-convert-row').style.display = show ? 'block' : 'none';
   }
 
-  function calculateMath(el) {
-    try {
-      if (/^[0-9+\-*/.() ]+$/.test(el.value)) {
-         el.value = eval(el.value); 
-         updateSplitMath();
-      }
-    } catch(e) {}
-  }
-
+  // --- 自動分類 ---
   async function predictCategory() {
     const item = document.getElementById('item-input').value.trim();
     if(!item) return;
@@ -342,196 +341,7 @@
     finally { document.getElementById('predict-loading').style.display = 'none'; }
   }
 
-  function toggleSplitMode() {
-    splitMode = splitMode === "EVEN" ? "CUSTOM" : "EVEN";
-    renderSplitList();
-  }
-
-  function toggleMember(idx) {
-    if (splitMode !== "EVEN") return;
-    const chk = document.getElementById(`chk-${idx}`);
-    chk.classList.toggle('checked');
-    updateSplitMath();
-  }
-
-  // ✅ 全選/全取消功能
-  function toggleSelectAll(forceSelect = null) {
-    if (splitMode !== "EVEN") return; // 只有均分模式能全選
-
-    const allChecks = document.querySelectorAll('.checkbox');
-    // 如果傳入 forceSelect 則強制設定，否則判斷目前狀態
-    // 邏輯：只要有一個沒勾，就全選；如果都勾了，就全取消
-    let shouldSelectAll = true;
-    if (forceSelect === null) {
-       const allChecked = Array.from(allChecks).every(c => c.classList.contains('checked'));
-       shouldSelectAll = !allChecked;
-    } else {
-       shouldSelectAll = forceSelect;
-    }
-
-    allChecks.forEach(c => {
-       if(shouldSelectAll) c.classList.add('checked');
-       else c.classList.remove('checked');
-    });
-    updateSplitMath();
-  }
-
-  function calcRemainder() {
-    const total = parseFloat(document.getElementById('amount-input').value) || 0;
-    let currentSum = 0;
-    settings.members.forEach((m, i) => {
-       currentSum += parseFloat(document.getElementById(`amt-${i}`).value) || 0;
-    });
-    const diff = total - currentSum;
-    const el = document.getElementById('remainder-display');
-    if (Math.abs(diff) < 0.1) {
-       el.innerText = "剛好分完"; el.className = "status-ok";
-    } else {
-       el.innerText = diff > 0 ? `剩餘 ${diff.toFixed(1)}` : `超支 ${Math.abs(diff).toFixed(1)}`;
-       el.className = "status-err";
-    }
-  }
-
-// 編輯模式回填 (升級版：支援反解自訂分帳)
-  function fillForm(record) {
-     document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
-     document.getElementById('item-input').value = record.item;
-     document.getElementById('amount-input').value = record.amount;
-     document.getElementById('category-select').value = record.category;
-     document.getElementById('payment-select').value = record.method;
-     document.getElementById('payer-select').value = record.payer;
-     document.getElementById('note-input').value = record.note;
-     
-     // 設定幣別
-     const isTwd = (record.currency === 'TWD');
-     // 找到對應的幣別按鈕 (假設只有兩個按鈕: 主幣別 和 TWD)
-     const btns = document.querySelectorAll('.c-btn');
-     if (isTwd && btns.length > 1) setCurrency('TWD', btns[1]);
-     else setCurrency(record.currency, btns[0]);
-
-     if(record.amountTWD) document.getElementById('amount-twd-input').value = record.amountTWD;
-
-     // 🧠 分帳回填核心邏輯
-     const splitText = record.split || "";
-
-     if (splitText === "均分") {
-        // 情境 1: 均分 -> 全選
-        splitMode = "EVEN";
-        toggleSelectAll(true); 
-
-     } else if (splitText.startsWith("都") && splitText.endsWith("的")) {
-        // 情境 2: 都A的 -> 均分模式，只勾A
-        splitMode = "EVEN";
-        const name = splitText.substring(1, splitText.length - 1); // 去掉頭尾
-        toggleSelectAll(false); // 先全取消
-        
-        // 勾選該成員
-        settings.members.forEach((m, i) => {
-           if(m === name) document.getElementById(`chk-${i}`).classList.add('checked');
-        });
-
-     } else if (splitText.includes("的")) {
-        // 情境 3: 自訂金額 (例如 "A的10、B的20")
-        // 或者是 部分均分 (例如 "A的50、B的50")
-        // 這裡我們統一視為「自訂模式 (CUSTOM)」處理，這樣最準確
-        
-        splitMode = "CUSTOM"; // 切換到手輸模式
-        
-        // 解析字串：先用「、」分割，再解析「的」
-        const parts = splitText.split("、");
-        
-        // 先清空所有人的金額
-        settings.members.forEach((m, i) => document.getElementById(`amt-${i}`).value = "");
-
-        parts.forEach(part => {
-           // part 可能是 "A的10"
-           const [name, amount] = part.split("的");
-           if (name && amount) {
-              // 找到這個名字對應的 index
-              const idx = settings.members.indexOf(name);
-              if (idx !== -1) {
-                 document.getElementById(`amt-${idx}`).value = parseFloat(amount);
-              }
-           }
-        });
-
-     } else {
-        // 其他未知情況，維持預設或只顯示在備註
-        if(splitText) document.getElementById('note-input').value += ` (原分帳: ${splitText})`;
-     }
-     
-     // 最後記得重新渲染列表，數值才會顯示出來
-     renderSplitList();
-  }
-// --- 自製計算機邏輯 ---
-  
-  // 開啟計算機
-  function openCalculator() {
-    document.getElementById('custom-calculator').classList.add('show');
-    // 如果目前金額是 0，先清空方便輸入
-    const el = document.getElementById('amount-input');
-    if(el.value === "0") el.value = "";
-  }
-
-  // 關閉計算機 (點擊背景或其他地方時可以呼叫，這裡先做在 OK 鍵裡)
-  function closeCalculator() {
-    document.getElementById('custom-calculator').classList.remove('show');
-  }
-
-  // 處理按鍵輸入
-  function calcAppend(val) {
-    const el = document.getElementById('amount-input');
-    
-    if (val === 'AC') {
-      el.value = "";
-    } else if (val === 'DEL') {
-      el.value = el.value.slice(0, -1);
-    } else {
-      // 避免重複輸入運算符號 (簡易防呆)
-      const lastChar = el.value.slice(-1);
-      const isOp = ['+','-','*','/'].includes(val);
-      if (isOp && ['+','-','*','/'].includes(lastChar)) {
-         el.value = el.value.slice(0, -1) + val; // 替換最後一個符號
-      } else {
-         el.value += val;
-      }
-    }
-  }
-
-// 按下 OK：計算結果並更新分帳
-  function calcDone() {
-    const el = document.getElementById('amount-input');
-    try {
-      if (el.value) {
-        // 移除可能在結尾的運算符號 (例如 "100+" -> "100")
-        let safeValue = el.value.replace(/[+\-*/]*$/, '');
-        
-        // 使用 Function 執行數學運算
-        const result = new Function('return ' + safeValue)(); 
-        
-        // 處理無限大或非數字的情況
-        if (!isFinite(result) || isNaN(result)) {
-            el.value = "0";
-        } else {
-            // 取兩位小數並轉回數字，避免精度問題
-            el.value = Math.round(result * 100) / 100;
-        }
-        
-        // 觸發原本的分帳更新邏輯
-        updateSplitMath(); 
-      }
-    } catch (e) {
-      alert("算式錯誤，請重新輸入");
-      el.value = ""; // 清空錯誤輸入
-    }
-    
-    // ⚠️ 關鍵：這行一定要在最後面，負責關閉計算機面板
-    closeCalculator();
-  }
-
-  // --- 分帳核心邏輯 (Hybrid Mode) ---
-
-// 1. 渲染列表 (修復版)
+  // --- 分帳邏輯 ---
   function renderSplitList() {
     const list = document.getElementById('split-list');
     const oldHtml = list.innerHTML;
@@ -541,7 +351,6 @@
       let isChecked = true;
       let existingVal = "";
 
-      // 嘗試保留輸入狀態
       if (oldHtml) {
          const oldChk = document.getElementById(`chk-${idx}`);
          const oldInp = document.getElementById(`amt-${idx}`);
@@ -554,7 +363,6 @@
       const initial = member.substring(0,1);
       const inputClass = existingVal ? "split-amount has-value" : "split-amount";
 
-      // 🔥 [修正點] 移除重複的 user-name
       row.innerHTML = `
         <div class="user-info" onclick="toggleSplitMember(${idx})">
            <div class="checkbox ${isChecked?'checked':''}" id="chk-${idx}"></div>
@@ -572,12 +380,9 @@
     updateSplitMath();
   }
 
-  // 2. 點擊名字/勾選框
   function toggleSplitMember(idx) {
     const chk = document.getElementById(`chk-${idx}`);
     chk.classList.toggle('checked');
-    
-    // 如果取消勾選，清空該使用者的輸入值
     if (!chk.classList.contains('checked')) {
         const inp = document.getElementById(`amt-${idx}`);
         inp.value = "";
@@ -586,12 +391,9 @@
     updateSplitMath();
   }
 
-  // 3. 輸入金額時
   function onSplitInput(idx) {
     const inp = document.getElementById(`amt-${idx}`);
     const chk = document.getElementById(`chk-${idx}`);
-    
-    // 如果輸入了數字，自動勾選該使用者
     if (inp.value !== "") {
         chk.classList.add('checked');
         inp.classList.add('has-value');
@@ -601,7 +403,6 @@
     updateSplitMath();
   }
 
-  // 4. 重置 / 全選按鈕
   function resetSplit() {
     settings.members.forEach((m, i) => {
        document.getElementById(`chk-${i}`).classList.add('checked');
@@ -612,16 +413,14 @@
     updateSplitMath();
   }
 
-  // 5. ✅ 核心運算：即時計算每個人該付多少
   function updateSplitMath() {
     const total = parseFloat(document.getElementById('amount-input').value) || 0;
     document.getElementById('total-display').innerText = total;
 
     let manualSum = 0;
     let manualCount = 0;
-    let autoCount = 0; // 有勾選但沒輸入金額的人 (參與均分的人)
+    let autoCount = 0;
 
-    // 第一輪：統計手動輸入的金額 & 還有誰要均分
     settings.members.forEach((m, i) => {
        const chk = document.getElementById(`chk-${i}`);
        const inp = document.getElementById(`amt-${i}`);
@@ -630,24 +429,17 @@
 
        if (isChecked) {
            if (valStr !== "") {
-               // 有指定金額
                manualSum += parseFloat(valStr);
                manualCount++;
            } else {
-               // 沒指定金額，加入均分池
                autoCount++;
            }
-       } else {
-           // 沒勾選的人，強制金額顯示為空或 0
-           // inp.placeholder = "0"; 
        }
     });
 
-    // 計算剩餘金額
     const remaining = total - manualSum;
     const perPerson = autoCount > 0 ? Math.round((remaining / autoCount) * 100) / 100 : 0;
 
-    // 第二輪：更新 UI 顯示 (Placeholder)
     settings.members.forEach((m, i) => {
        const chk = document.getElementById(`chk-${i}`);
        const inp = document.getElementById(`amt-${i}`);
@@ -657,17 +449,12 @@
        if (!isChecked) {
            inp.placeholder = "不參與";
        } else if (valStr === "") {
-           // 參與均分的人，顯示計算後的金額
            inp.placeholder = perPerson;
-       } else {
-           // 有手動輸入的人，placeholder 不重要
        }
     });
 
-    // 更新狀態文字
     const infoEl = document.getElementById('remainder-display');
     if (autoCount === 0) {
-        // 如果沒有人均分 (全部都是手動輸入，或者都沒勾)
         if (Math.abs(remaining) < 0.1) {
             infoEl.innerText = "完美分配"; infoEl.className = "status-ok";
         } else {
@@ -675,7 +462,6 @@
             infoEl.className = "status-err";
         }
     } else {
-        // 還有剩餘金額給 autoCount 的人分
         if (remaining < 0) {
             infoEl.innerText = `超支 ${Math.abs(remaining)} (請修正)`;
             infoEl.className = "status-err";
@@ -686,9 +472,7 @@
     }
   }
 
-  // 6. ✅ 產生分帳字串 (符合你的需求)
   function getSplitText() {
-    // 檢查是否有「任何」手動輸入的金額
     let hasManualInput = false;
     let checkedCount = 0;
     const totalMembers = settings.members.length;
@@ -698,12 +482,8 @@
         if (document.getElementById(`chk-${i}`).classList.contains('checked')) checkedCount++;
     });
 
-    // 情境 1: 均分 (全選 + 無手動輸入)
-    if (checkedCount === totalMembers && !hasManualInput) {
-        return "均分";
-    }
-
-    // 情境 2: 都誰的 (只勾 1 人 + 無手動輸入)
+    if (checkedCount === totalMembers && !hasManualInput) return "均分";
+    
     if (checkedCount === 1 && !hasManualInput) {
         let name = "";
         settings.members.forEach((m, i) => {
@@ -712,17 +492,8 @@
         return "都" + name + "的";
     }
 
-    // 情境 4: 沒人勾 (Null)
-    if (checkedCount === 0) {
-        return null;
-    }
+    if (checkedCount === 0) return null;
 
-    // 情境 3: 混合模式 (有手動輸入，或部分勾選) -> 產生 "A的10、B的0"
-    // 邏輯：只要有「手動輸入」的人，我們就明確列出。
-    // 如果是「沒勾選」的人，是否要送 "X的0"？根據你的需求 3，Sheet 會自動分剩下的。
-    // 所以我們只要送出「被明確指定金額」的人就好？
-    // 修正：為了安全起見，如果有人被「取消勾選」，我們應該視為「指定為 0」。
-    
     let parts = [];
     settings.members.forEach((m, i) => {
         const chk = document.getElementById(`chk-${i}`);
@@ -730,26 +501,16 @@
         const valStr = inp.value;
 
         if (chk.classList.contains('checked')) {
-            // 有勾選
-            if (valStr !== "") {
-                // 有指定金額 -> "A的10"
-                parts.push(`${m}的${valStr}`);
-            } else {
-                // 有勾選但沒輸入 -> 這是「剩餘均分」的人，不用寫在字串裡，讓 Sheet 自己算
-            }
+            if (valStr !== "") parts.push(`${m}的${valStr}`);
         } else {
-            // 沒勾選 -> 視為 "A的0" (強制不參與)
-            // 這樣 Sheet 在算剩餘均分時，就不會分給他
             parts.push(`${m}的0`);
         }
     });
-
     return parts.join("、");
   }
 
-  // 7. 編輯回填 (Fill Form) 需要配合修改
+  // ✅ 回填表單 (修正日期時間問題)
   function fillForm(record) {
-     // ... (前面基本的 item, amount, category 等回填邏輯不變) ...
      document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
      document.getElementById('item-input').value = record.item;
      document.getElementById('amount-input').value = record.amount;
@@ -758,6 +519,15 @@
      document.getElementById('payer-select').value = record.payer;
      document.getElementById('note-input').value = record.note;
      
+     // 🔥 [修正] 回填日期 (將 Google Sheet 的時間格式轉為 datetime-local 格式)
+     // record.date 可能是 "2026-02-09T18:55:00.000Z" 這種字串
+     if(record.date) {
+         let dateObj = new Date(record.date);
+         // 調整時區 (假設使用者在台灣/本地時區)
+         dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
+         document.getElementById('date-input').value = dateObj.toISOString().slice(0,16);
+     }
+
      const isTwd = (record.currency === 'TWD');
      const btns = document.querySelectorAll('.c-btn');
      if (isTwd && btns.length > 1) setCurrency('TWD', btns[1]);
@@ -765,34 +535,21 @@
 
      if(record.amountTWD) document.getElementById('amount-twd-input').value = record.amountTWD;
 
-     // --- 分帳回填邏輯 ---
-     const splitText = record.split || "均分"; // 預設均分
-     
-     // 先重置所有狀態 (全選、無金額)
+     // 分帳回填邏輯
+     const splitText = record.split || "均分"; 
      resetSplit();
 
      if (splitText === "均分") {
-        // 預設就是全選，不用動
+        // 全選
      } else if (splitText.startsWith("都") && splitText.endsWith("的")) {
-        // "都A的"
         const name = splitText.substring(1, splitText.length - 1);
         settings.members.forEach((m, i) => {
             const chk = document.getElementById(`chk-${i}`);
-            // 只勾選該人，其他人取消
             if (m === name) chk.classList.add('checked');
             else chk.classList.remove('checked');
         });
      } else {
-        // "A的10、B的0" (混合模式)
-        // 解析字串
         const parts = splitText.split("、");
-        
-        // 此時策略：
-        // 1. 先把所有人都設為「有勾選、無金額」(均分池) -> 這是 resetSplit 做的事
-        // 2. 讀取字串，如果字串有 "A的10"，填入 10。
-        // 3. 如果字串有 "B的0"，填入 0 (且取消勾選？或者勾選但金額為0？根據你的邏輯是勾選填0)。
-        //    *修正：你的需求是 A的10、B的0 -> A填10，B填0。
-        
         parts.forEach(part => {
            const [name, amount] = part.split("的");
            if (name && amount !== undefined) {
@@ -801,26 +558,53 @@
                   const val = parseFloat(amount);
                   const inp = document.getElementById(`amt-${idx}`);
                   const chk = document.getElementById(`chk-${idx}`);
-                  
                   inp.value = val;
                   inp.classList.add('has-value');
-                  
-                  // 如果是 0，你可以決定要不要取消勾選，
-                  // 但根據你的邏輯，填 0 也是一種明確的指定，所以保持勾選比較好理解
                   chk.classList.add('checked'); 
               }
            }
         });
-        
-        // 還有一個邊緣情況：如果有人沒在字串裡，也沒被勾選怎麼辦？
-        // 你的 Sheet 邏輯是「剩下的均分」。
-        // 所以沒出現在字串裡的人，應該保持「勾選 + 空白金額」，讓他們去分剩下的。
      }
-     
      updateSplitMath();
   }
 
-// ✅ 智慧型儲存函式 (快取接力版)
+  // --- 儲存與計算機 (保持原樣，僅省略以節省篇幅，請保留你原本的 save, closeCalculator 等函式) ---
+  // ... (這裡的 save, openCalculator, closeCalculator, calcAppend, calcDone 請沿用你原本正確的代碼) ...
+  
+  function openCalculator() {
+    document.getElementById('custom-calculator').classList.add('show');
+    const el = document.getElementById('amount-input');
+    if(el.value === "0") el.value = "";
+  }
+  function closeCalculator() {
+    document.getElementById('custom-calculator').classList.remove('show');
+  }
+  function calcAppend(val) {
+    const el = document.getElementById('amount-input');
+    if (val === 'AC') { el.value = ""; } 
+    else if (val === 'DEL') { el.value = el.value.slice(0, -1); } 
+    else {
+      const lastChar = el.value.slice(-1);
+      const isOp = ['+','-','*','/'].includes(val);
+      if (isOp && ['+','-','*','/'].includes(lastChar)) {
+         el.value = el.value.slice(0, -1) + val;
+      } else { el.value += val; }
+    }
+  }
+  function calcDone() {
+    const el = document.getElementById('amount-input');
+    try {
+      if (el.value) {
+        let safeValue = el.value.replace(/[+\-*/]*$/, '');
+        const result = new Function('return ' + safeValue)(); 
+        if (!isFinite(result) || isNaN(result)) { el.value = "0"; } 
+        else { el.value = Math.round(result * 100) / 100; }
+        updateSplitMath(); 
+      }
+    } catch (e) { alert("算式錯誤"); el.value = ""; }
+    closeCalculator();
+  }
+
   function save() {
     const splitText = getSplitText();
     const payload = {
@@ -840,9 +624,7 @@
     const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.innerText = "儲存中...";
 
-    // 判斷環境
     if (liff.isInClient()) {
-        // 📱 手機版：先用 Fetch 傳資料給 GAS (useCache: true)
         fetch(GAS_URL, {
           method: 'POST',
           body: JSON.stringify({ action: 'saveTransaction', userId: userId, data: payload, useCache: true })
@@ -850,52 +632,25 @@
         .then(r => r.json())
         .then(res => {
            if(res.success) {
-               // 資料已傳給後端存快取，現在發送觸發指令
                liff.sendMessages([{ type: 'text', text: "✅ 記帳完成" }])
                    .then(() => liff.closeWindow())
-                   .catch(err => {
-                       // 萬一使用者沒授權發訊息，至少資料已經存了，直接關閉
-                       console.error(err);
-                       liff.closeWindow();
-                   });
-           } else {
-               alert("儲存失敗: " + res.error);
-               btn.disabled = false; btn.innerText = "確認儲存";
-           }
+                   .catch(err => { console.error(err); liff.closeWindow(); });
+           } else { alert("儲存失敗: " + res.error); btn.disabled = false; btn.innerText = "確認儲存"; }
         })
-        .catch(e => {
-            alert("網路錯誤: " + e);
-            btn.disabled = false; btn.innerText = "確認儲存";
-        });
-
+        .catch(e => { alert("網路錯誤: " + e); btn.disabled = false; btn.innerText = "確認儲存"; });
     } else {
-        // 💻 電腦版：走原本的 Push 路線
-        sendByFetch(payload, btn);
+        // 電腦版 Fetch 邏輯
+        fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'saveTransaction', userId: userId, data: payload })
+        })
+        .then(r=>r.json())
+        .then(res => {
+           if(res.success) { alert("✅ 儲存成功！"); window.location.reload(); }
+           else { alert("失敗: " + res.error); btn.disabled = false; btn.innerText = "確認儲存"; }
+        })
+        .catch(e => { alert("錯誤: " + e); btn.disabled = false; btn.innerText = "確認儲存"; });
     }
-  }
-
-  // ✅ 2. 輔助：Fetch 傳送 (給電腦版或失敗時用)
-  function sendByFetch(payload, btn) {
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveTransaction', userId: userId, data: payload })
-    })
-    .then(r=>r.json())
-    .then(res => {
-       if(res.success) {
-           // 電腦版無法 closeWindow，改為跳出提示並重整
-           alert("✅ 儲存成功！\n(請手動關閉此視窗)");
-           window.location.reload(); 
-       }
-       else { 
-           alert("失敗: " + res.error); 
-           btn.disabled = false; btn.innerText = "確認儲存"; 
-       }
-    })
-    .catch(e => { 
-        alert("錯誤: " + e); 
-        btn.disabled = false; btn.innerText = "確認儲存"; 
-    });
   }
 </script>
 </body>
