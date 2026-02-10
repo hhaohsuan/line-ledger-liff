@@ -350,7 +350,7 @@
                  note: urlParams.get('note') || "",
                  currency: settings.currency, // 預設用主幣別
                  payer: settings.members[0], // 預設第一人
-                 split: "均分"
+                 split: urlParams.get('split') || "(未指定)"
              };
              // 呼叫 fillForm 把資料填進去
              fillForm(prefillData);
@@ -609,7 +609,8 @@
         return "都" + name + "的";
     }
 
-    if (checkedCount === 0) return null;
+    // 🔥 [修正] 沒人勾選時，明確回傳 "(未指定)"，而不是 null
+    if (checkedCount === 0) return "(未指定)";
 
     let parts = [];
     settings.members.forEach((m, i) => {
@@ -665,43 +666,38 @@
 
      if(record.amountTWD) document.getElementById('amount-twd-input').value = record.amountTWD;
 
-     // --- 分帳回填邏輯修正 ---
-     const splitText = record.split || "均分"; 
+     // 🔥 [修正] 讀取時，如果內容是空的，改為預設 "(未指定)"，這樣就不會自動全選了
+     const splitText = record.split || "(未指定)"; 
      
-     // 1. 先重置 (此時會預設全選、模式為 EVEN)
      resetSplit();
 
-     // 2. 針對不同狀況調整
      if (splitText === "均分") {
-        // 維持全選，不用動
+        // 維持全選 (resetSplit 預設就是全選)
      } 
      else if (splitText === "(未指定)") {
-        // 🔥 [修正] 如果是未指定，就「全部取消勾選」
+        // 🔥 [修正] 明確執行全取消
         toggleSelectAll(false);
      }
      else if (splitText.startsWith("都") && splitText.endsWith("的")) {
-        // "都某人的" -> 只勾那個人
         const name = splitText.substring(1, splitText.length - 1);
-        toggleSelectAll(false); // 先全取消
+        toggleSelectAll(false);
         settings.members.forEach((m, i) => {
             if (m === name) document.getElementById(`chk-${i}`).classList.add('checked');
         });
      } 
      else {
-        // 自訂模式 (混合或特定金額)
+        // 自訂模式
         splitMode = "CUSTOM"; 
-        toggleSelectAll(false); // 🔥 [修正] 先全取消，再根據資料一個個勾回來，避免混亂
+        toggleSelectAll(false); // 先全取消
         
-        const parts = splitText.split("、"); // 或者是 \n 分隔，看你存什麼
-        
-        // 確保輸入框是乾淨的 (resetSplit 已經清過了，這裡保險起見)
+        const parts = splitText.split("、");
+        // 清空輸入框
         settings.members.forEach((m, i) => {
-            document.getElementById(`amt-${i}`).value = "";
+             document.getElementById(`amt-${i}`).value = "";
         });
 
         parts.forEach(part => {
-           // 處理 "軒的100" 或 "軒的100\n能的50" 這種格式
-           // 如果是用 \n 分隔，這裡 split 要注意。假設是用 "、" 連接的字串
+           // 支援 "A的100" 格式
            const [name, amount] = part.split("的");
            if (name && amount !== undefined) {
               const idx = settings.members.indexOf(name);
@@ -712,13 +708,12 @@
                   
                   inp.value = val;
                   if (val > 0) inp.classList.add('has-value');
-                  chk.classList.add('checked'); // 把有錢的人勾回來
+                  chk.classList.add('checked');
               }
            }
         });
      }
      
-     // 最後更新一下計算 (顯示 "還有 xxx 未分" 或 "完美分配")
      updateSplitMath();
   }
 
