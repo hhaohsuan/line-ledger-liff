@@ -629,7 +629,14 @@
 
   // ✅ 編輯模式回填 (修正日期時間回填問題)
   function fillForm(record) {
-     document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
+     // 🔥 [修正] 先檢查網址有沒有 'row='
+     // 如果有，代表是「修改舊帳」，抓行號。
+     // 如果沒有，代表是「AI 新記帳」，設為空字串 (後端就會知道是新增)。
+     if (window.location.search.indexOf('row=') > -1) {
+         document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
+     } else {
+         document.getElementById('edit-row-index').value = ""; 
+     }
      
      // 🔥 [關鍵修正] 處理日期回填
      // 🔥 日期回填邏輯 (相容網址傳參)
