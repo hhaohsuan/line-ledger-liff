@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>帳本設定</title>
   <style>
-    /* ✅ 全域設定 */
+    /* ✅ 1. 全域與主題變數 (完全複製 Record 頁面的風格) */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    /* --- 🎨 主題變數系統 (與 Record 一致) --- */
     :root {
       --primary: #06c755; --primary-light: #e8f9ee;
       --bg: #f7f9fc; --card-bg: #ffffff;
@@ -16,7 +15,7 @@
       --border: #e1e5eb; --input-bg: #f9f9f9; --red: #ff4b4b;
     }
 
-    /* 主題色 */
+    /* 主題色系 */
     body[data-color="blue"] { --primary: #007bff; --primary-light: #e6f2ff; }
     body[data-color="purple"] { --primary: #8e44ad; --primary-light: #f4ecf7; }
     body[data-color="orange"] { --primary: #ff9800; --primary-light: #fff3e0; }
@@ -31,13 +30,17 @@
 
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: var(--text); transition: background 0.3s, color 0.3s; }
 
-    /* Header */
-    .header { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 1px 0 var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+    /* Header (含設定按鈕區) */
+    .header { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 1px 0 var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s; }
     .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
-    .icon-btn { font-size: 20px; cursor: pointer; padding: 5px; border: none; background: transparent; color: var(--text-sub); }
+    
+    /* 🟢 新增：右上角設定區塊樣式 */
+    .settings-area { display: flex; gap: 10px; align-items: center; }
+    .theme-select { padding: 5px; border-radius: 8px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 14px; outline: none; }
+    .icon-btn { font-size: 20px; cursor: pointer; padding: 5px; border: none; background: transparent; color: var(--text-sub); line-height: 1; }
 
     .container { padding: 20px; max-width: 600px; margin: 0 auto; }
-    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); transition: background 0.3s; }
     
     label { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; display: block; font-weight: 500; }
     
@@ -87,7 +90,16 @@
 <div class="header">
   <div class="icon-btn" onclick="liff.closeWindow()">✕</div>
   <h1>帳本設定</h1>
-  <div style="width: 24px;"></div> 
+  <div class="settings-area">
+      <select id="theme-select" class="theme-select" onchange="changeColor(this.value)">
+          <option value="green">綠色</option>
+          <option value="blue">藍色</option>
+          <option value="purple">紫色</option>
+          <option value="orange">橘色</option>
+          <option value="pink">粉色</option>
+      </select>
+      <button class="icon-btn" onclick="toggleDarkMode()">🌙</button>
+  </div>
 </div>
 
 <div class="container">
@@ -99,7 +111,7 @@
 
   <div class="card">
     <label>預設幣別</label>
-    <select id="currency-select">
+    <select id="currency-select" onchange="onCurrencyChange()">
         <option value="TWD">TWD (新台幣)</option>
         <option value="JPY">JPY (日圓)</option>
         <option value="USD">USD (美元)</option>
@@ -107,7 +119,18 @@
         <option value="KRW">KRW (韓元)</option>
         <option value="CNY">CNY (人民幣)</option>
         <option value="THB">THB (泰銖)</option>
+        <option value="OTHER">自行輸入...</option>
     </select>
+    <input type="text" id="currency-other" placeholder="輸入代碼 (如 GBP)" style="display:none; margin-top:10px;" onblur="updateRateFromOther()">
+  </div>
+
+  <div class="card">
+    <label>匯率 (對台幣)</label>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <input type="number" id="rate" step="0.0001" placeholder="1.0">
+        <span id="fetching-msg" style="font-size:12px; color:var(--primary); display:none;">🔄 更新中...</span>
+    </div>
+    <div style="font-size:12px; color:var(--text-sub); margin-top:5px;">* 選擇幣別後會嘗試自動抓取匯率</div>
   </div>
 
   <div class="card">
@@ -115,7 +138,7 @@
     <div id="members-tags" class="tags-container"></div>
     <div class="input-row">
        <input type="text" id="new-member" placeholder="輸入名字...">
-       <button class="btn-add" onclick="add('members-tags', 'new-member', 10)">＋</button>
+       <button class="btn-add" onclick="add('members-tags', 'new-member', 13)">＋</button>
     </div>
   </div>
 
@@ -124,7 +147,7 @@
     <div id="categories-tags" class="tags-container"></div>
     <div class="input-row">
        <input type="text" id="new-category" placeholder="輸入分類...">
-       <button class="btn-add" onclick="add('categories-tags', 'new-category', 20)">＋</button>
+       <button class="btn-add" onclick="add('categories-tags', 'new-category', 15)">＋</button>
     </div>
   </div>
 
@@ -145,7 +168,7 @@
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  // 🔴 請確認 LIFF_ID 是否正確 (Settings 的 ID)
+  // 🔴 請確認 LIFF_ID (Settings 的 ID)
   const LIFF_ID = "2009010836-1OaNzGM2"; 
   const GAS_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec";
 
@@ -153,10 +176,10 @@
   let currentUserId = "";
 
   window.onload = function() {
-    // 1. 套用主題 (從 localStorage 讀取 Record 頁面設定的主題)
-    applyTheme();
+    // 3. 🟢 新增：初始化主題 (讀取 Record 頁面存的設定)
+    initTheme();
 
-    // 2. LIFF 初始化
+    // 4. LIFF 初始化
     liff.init({ liffId: LIFF_ID }).then(() => {
       if (!liff.isLoggedIn()) { liff.login(); return; }
       liff.getProfile().then(profile => {
@@ -168,11 +191,28 @@
     });
   };
 
-  function applyTheme() {
+  // 🟢 5. 新增：主題控制邏輯 (與 Record 頁面共用 localStorage)
+  function initTheme() {
       const savedColor = localStorage.getItem('app-color') || 'green';
       const savedDark = localStorage.getItem('app-dark') === 'true';
+      
+      // 套用顏色
       document.body.setAttribute('data-color', savedColor);
+      document.getElementById('theme-select').value = savedColor;
+      
+      // 套用暗黑模式
       if (savedDark) document.body.classList.add('dark-mode');
+  }
+
+  function changeColor(color) {
+      document.body.setAttribute('data-color', color);
+      localStorage.setItem('app-color', color);
+  }
+
+  function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      localStorage.setItem('app-dark', isDark);
   }
 
   function loadSettings() {
@@ -185,7 +225,10 @@
       if(res.success) {
         settingsData = res.data;
         document.getElementById('ledger-name').value = settingsData.ledgerName || "";
-        document.getElementById('currency-select').value = settingsData.currency || "TWD";
+        
+        // 設定幣別選單
+        setCurrencyUI(settingsData.currency || "TWD");
+        document.getElementById('rate').value = settingsData.rate || 1;
         
         renderTags('members-tags', settingsData.members);
         renderTags('categories-tags', settingsData.categories);
@@ -204,7 +247,6 @@
     const container = document.getElementById(containerId);
     container.innerHTML = "";
     list.forEach((item, index) => {
-       // 產生標籤 HTML
        const tag = document.createElement('div');
        tag.className = 'tag';
        tag.innerHTML = `${item} <span class="rm" onclick="removeTag('${containerId}', ${index})">×</span>`;
@@ -226,7 +268,6 @@
     input.value = "";
   }
 
-  // 因為 removeTag 是動態生成的 HTML 呼叫的，需要掛在 window 下
   window.removeTag = function(containerId, index) {
     let list = getListByContainer(containerId);
     if(list.length <= 1 && containerId !== 'payments-tags') { 
@@ -243,13 +284,72 @@
      return [];
   }
 
+  // --- 匯率相關功能 ---
+  function onCurrencyChange() {
+    var select = document.getElementById('currency-select');
+    var otherInput = document.getElementById('currency-other');
+    var val = select.value;
+
+    if (val === "OTHER") {
+      otherInput.style.display = "block";
+      otherInput.value = "";
+      otherInput.focus();
+    } else {
+      otherInput.style.display = "none";
+      updateRate(val);
+    }
+  }
+
+  function updateRateFromOther() {
+    var val = document.getElementById('currency-other').value.toUpperCase();
+    if (val.length === 3) updateRate(val);
+  }
+
+  function updateRate(code) {
+    if (!code || code === "TWD") {
+       document.getElementById('rate').value = 1;
+       return;
+    }
+    document.getElementById('fetching-msg').style.display = "inline";
+    fetch('https://api.exchangerate-api.com/v4/latest/' + code)
+      .then(res => res.json())
+      .then(data => {
+         var rateToTwd = data.rates.TWD;
+         if (rateToTwd) document.getElementById('rate').value = rateToTwd;
+      })
+      .catch(() => {})
+      .finally(() => { document.getElementById('fetching-msg').style.display = "none"; });
+  }
+
+  function setCurrencyUI(savedCurrency) {
+     var select = document.getElementById('currency-select');
+     var otherInput = document.getElementById('currency-other');
+     var exists = false;
+     for (var i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === savedCurrency) { exists = true; break; }
+     }
+     if (exists) {
+        select.value = savedCurrency;
+        otherInput.style.display = "none";
+     } else {
+        select.value = "OTHER";
+        otherInput.style.display = "block";
+        otherInput.value = savedCurrency;
+     }
+  }
+
   function save() {
     const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.innerText = "儲存中...";
 
+    var selectVal = document.getElementById('currency-select').value;
+    var finalCurrency = (selectVal === "OTHER") ? document.getElementById('currency-other').value.trim().toUpperCase() : selectVal;
+    if (!finalCurrency) finalCurrency = "TWD";
+
     const payload = {
        ledgerName: document.getElementById('ledger-name').value,
-       currency: document.getElementById('currency-select').value,
+       currency: finalCurrency,
+       rate: document.getElementById('rate').value,
        members: settingsData.members,
        categories: settingsData.categories,
        payments: settingsData.payments
@@ -277,4 +377,3 @@
 </script>
 </body>
 </html>
-
