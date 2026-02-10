@@ -312,11 +312,21 @@
 
   async function loadData() {
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // 1. 檢查是否有 row (編輯舊資料模式)
     const editRow = urlParams.get('row');
+    
+    // 2. 檢查是否有 mode=prefill (AI 圖片記帳預填模式)
+    const isPrefill = urlParams.get('mode') === 'prefill';
+
     const action = editRow ? 'getEditData' : 'getSettings';
 
     try {
-      const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action, userId, row: editRow }) }).then(r=>r.json());
+      const res = await fetch(GAS_URL, { 
+          method: 'POST', 
+          body: JSON.stringify({ action: action, userId: userId, row: editRow }) 
+      }).then(r=>r.json());
+
       if(res.success) {
          settings = res.data;
          renderSelect('category-select', settings.categories);
@@ -325,7 +335,27 @@
          renderCurrencyUI(settings.currency);
          renderSplitList();
          
-         if(editRow && res.record) fillForm(res.record);
+         // 🅰️ 情況一：編輯舊資料 (從 Sheet 讀取)
+         if(editRow && res.record) {
+             fillForm(res.record);
+         } 
+         // 🅱️ 情況二：AI 預填資料 (從網址讀取) 🔥🔥🔥 這裡是新增的關鍵！
+         else if (isPrefill) {
+             const prefillData = {
+                 item: urlParams.get('item') || "",
+                 amount: urlParams.get('amount') || "",
+                 date: urlParams.get('date') || "", // 注意：這裡是日期字串
+                 category: urlParams.get('category') || settings.categories[0],
+                 method: urlParams.get('method') || settings.payments[0],
+                 note: urlParams.get('note') || "",
+                 currency: settings.currency, // 預設用主幣別
+                 payer: settings.members[0], // 預設第一人
+                 split: "均分"
+             };
+             // 呼叫 fillForm 把資料填進去
+             fillForm(prefillData);
+         }
+         // 🆎 情況三：全新記帳
          else {
             if(settings.members.length > 0) document.getElementById('payer-select').value = settings.members[0];
             toggleSelectAll(true); // 預設全選
@@ -601,23 +631,23 @@
      document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
      
      // 🔥 [關鍵修正] 處理日期回填
-     // 增加防呆與格式相容，確保在各瀏覽器(含 iOS)都能正確顯示時間
+     // 🔥 日期回填邏輯 (相容網址傳參)
      if (record.date) {
          try {
-             let dateObj = new Date(record.date);
-             // 如果格式錯誤 (Invalid Date)，嘗試手動修正字串格式 (ex: 把空格換成 T)
-             if (isNaN(dateObj.getTime()) && typeof record.date === 'string') {
-                 let cleanDate = record.date.replace(" ", "T").replace(/\//g, "-"); 
-                 dateObj = new Date(cleanDate);
-             }
-
+             // 嘗試解決網址編碼問題 (如果有的話)
+             let dateStr = decodeURIComponent(record.date);
+             // 處理 "2026-02-10 12:00" 這種中間有空格的格式，把它換成 "T"
+             dateStr = dateStr.replace(" ", "T"); 
+             
+             let dateObj = new Date(dateStr);
+             
              if (!isNaN(dateObj.getTime())) {
                  // 修正時區偏移
                  dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
                  document.getElementById('date-input').value = dateObj.toISOString().slice(0,16);
              }
          } catch (e) {
-             console.error("日期讀取失敗，維持顯示現在時間:", e);
+             console.error("日期解析失敗", e);
          }
      }
 
