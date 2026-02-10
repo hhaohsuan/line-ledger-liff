@@ -350,7 +350,7 @@
                  note: urlParams.get('note') || "",
                  currency: settings.currency, // 預設用主幣別
                  payer: settings.members[0], // 預設第一人
-                 split: urlParams.get('split') || "(未指定)"
+                 split: urlParams.get('split') || ""
              };
              // 呼叫 fillForm 把資料填進去
              fillForm(prefillData);
@@ -609,8 +609,8 @@
         return "都" + name + "的";
     }
 
-    // 🔥 [修正] 沒人勾選時，明確回傳 "(未指定)"，而不是 null
-    if (checkedCount === 0) return "(未指定)";
+    // 🔥 [修正] 如果沒人勾選，回傳 "" (空字串)，這樣寫入 Sheet 就會是空的
+    if (checkedCount === 0) return "";
 
     let parts = [];
     settings.members.forEach((m, i) => {
@@ -666,15 +666,15 @@
 
      if(record.amountTWD) document.getElementById('amount-twd-input').value = record.amountTWD;
 
-     // 🔥 [修正] 讀取時，如果內容是空的，改為預設 "(未指定)"，這樣就不會自動全選了
-     const splitText = record.split || "(未指定)"; 
+     // 🔥 [修正] 讀取時，如果內容是空的，就維持空字串
+     const splitText = record.split || "";
      
      resetSplit();
 
      if (splitText === "均分") {
         // 維持全選 (resetSplit 預設就是全選)
      } 
-     else if (splitText === "(未指定)") {
+     else if (splitText === "") {
         // 🔥 [修正] 明確執行全取消
         toggleSelectAll(false);
      }
