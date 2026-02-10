@@ -5,304 +5,275 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>帳本設定</title>
   <style>
-    :root { --primary: #06c755; --bg: #f2f5f8; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); padding: 15px; margin: 0; color: #333; }
+    /* ✅ 全域設定 */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    /* --- 🎨 主題變數系統 (與 Record 一致) --- */
+    :root {
+      --primary: #06c755; --primary-light: #e8f9ee;
+      --bg: #f7f9fc; --card-bg: #ffffff;
+      --text: #333333; --text-sub: #888888;
+      --border: #e1e5eb; --input-bg: #f9f9f9; --red: #ff4b4b;
+    }
+
+    /* 主題色 */
+    body[data-color="blue"] { --primary: #007bff; --primary-light: #e6f2ff; }
+    body[data-color="purple"] { --primary: #8e44ad; --primary-light: #f4ecf7; }
+    body[data-color="orange"] { --primary: #ff9800; --primary-light: #fff3e0; }
+    body[data-color="pink"] { --primary: #ff6b81; --primary-light: #ffeef0; }
+
+    /* 🌙 暗黑模式 */
+    body.dark-mode {
+      --bg: #121212; --card-bg: #1e1e1e;
+      --text: #e0e0e0; --text-sub: #aaaaaa;
+      --border: #333333; --input-bg: #2c2c2c;
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: var(--text); transition: background 0.3s, color 0.3s; }
+
+    /* Header */
+    .header { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 1px 0 var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    .icon-btn { font-size: 20px; cursor: pointer; padding: 5px; border: none; background: transparent; color: var(--text-sub); }
+
+    .container { padding: 20px; max-width: 600px; margin: 0 auto; }
+    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
     
-    #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    label { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; display: block; font-weight: 500; }
+    
+    input, select { 
+        width: 100%; padding: 12px; font-size: 16px; 
+        border: 1px solid var(--border); border-radius: 12px; 
+        background: var(--input-bg); color: var(--text);
+        outline: none; transition: 0.2s; appearance: none;
+    }
+    input:focus { border-color: var(--primary); background: var(--card-bg); }
+
+    /* 標籤樣式 (Tags) */
+    .tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+    .tag { 
+        background: var(--primary-light); color: var(--primary); 
+        padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .tag .rm { cursor: pointer; font-weight: bold; opacity: 0.6; padding: 0 4px; }
+    .tag .rm:hover { opacity: 1; color: var(--red); }
+
+    .input-row { display: flex; gap: 10px; margin-bottom: 5px; }
+    .btn-add { 
+        padding: 0 20px; background: var(--input-bg); color: var(--primary); 
+        border: 1px solid var(--border); border-radius: 12px; font-weight: bold; cursor: pointer;
+    }
+    .btn-add:active { background: var(--primary-light); }
+
+    /* Footer */
+    .footer { position: fixed; bottom: 0; left: 0; width: 100%; padding: 15px 20px; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; z-index: 900; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
+    .btn-main { width: 100%; flex: 1; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: 0.2s; }
+    .btn-main:active { transform: scale(0.98); }
+
+    /* Loading */
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.3s; }
+    .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; }
-    h2 { color: var(--primary); text-align: center; margin: 0 0 5px 0; }
-    h3 { font-size: 1rem; border-left: 4px solid var(--primary); padding-left: 8px; margin-top: 20px; }
-    
-    /* 輸入框樣式 */
-    input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-bottom: 5px; -webkit-appearance: none; font-size: 16px; background: #fff; }
-    input:focus, select:focus { border-color: var(--primary); outline: none; }
-
-    .tag-box { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-    .tag { background: #eefcf3; padding: 6px 12px; border-radius: 20px; border: 1px solid #ccebd4; display: flex; align-items: center; font-size: 14px; }
-    .tag .rm { color: #ff5e5e; margin-left: 8px; cursor: pointer; font-weight: bold; }
-    
-    .add-row { display: flex; gap: 5px; }
-    .btn-add { background: #eee; border: none; padding: 0 15px; border-radius: 8px; cursor: pointer; font-size: 20px; color: #666;}
-    .btn-save { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 30px; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: none; box-shadow: 0 4px 10px rgba(6,199,85,0.3); }
-    .btn-save:disabled { background: #ccc; box-shadow: none; }
-    
-    .hint { font-size: 12px; color: #999; margin-bottom: 5px; display: flex; justify-content: space-between; }
-    .rate-loading { color: var(--primary); font-weight: bold; font-size: 12px; display: none; }
   </style>
 </head>
 <body>
 
-<div id="loading">
+<div id="loading" class="loading-overlay">
   <div class="spinner"></div>
-  <p id="loading-text" style="margin-top:15px; color:#666;">啟動中...</p>
+  <p style="margin-top:15px; color:var(--text-sub);">載入設定中...</p>
 </div>
 
-<div class="card" id="main-ui">
-  <h2>⚙️ 帳本設定</h2>
-  <div id="ledger-title" style="text-align:center; color:#888; margin-bottom:20px;">...</div>
+<div class="header">
+  <div class="icon-btn" onclick="liff.closeWindow()">✕</div>
+  <h1>帳本設定</h1>
+  <div style="width: 24px;"></div> 
+</div>
 
-  <h3>成員 <span style="font-size:12px; font-weight:normal; color:#aaa">(最多13人)</span></h3>
-  <div id="members-list" class="tag-box"></div>
-  <div class="add-row">
-    <input type="text" id="new-member" placeholder="輸入名字">
-    <button type="button" class="btn-add" onclick="add('members-list', 'new-member', 13)">＋</button>
-  </div>
-
-  <h3>幣別 & 匯率</h3>
-  <div style="display:flex; gap:10px; align-items: flex-start;">
-     <div style="flex:1">
-       <select id="currency-select" onchange="onCurrencyChange()">
-         <option value="TWD">TWD (台幣)</option>
-         <option value="JPY">JPY (日幣)</option>
-         <option value="USD">USD (美金)</option>
-         <option value="EUR">EUR (歐元)</option>
-         <option value="KRW">KRW (韓元)</option>
-         <option value="THB">THB (泰銖)</option>
-         <option value="CNY">CNY (人民幣)</option>
-         <option value="HKD">HKD (港幣)</option>
-         <option value="OTHER">自行輸入...</option>
-       </select>
-       <input type="text" id="currency-other" placeholder="輸入代碼 (如 GBP)" style="display:none; margin-top:5px;" onchange="updateRateFromOther()">
-     </div>
-
-     <div style="flex:1">
-       <input type="number" id="rate" step="0.0001" placeholder="匯率">
-     </div>
-  </div>
+<div class="container">
   
-  <div class="hint">
-    <span>* 選擇幣別自動抓匯率</span>
-    <span id="fetching-msg" class="rate-loading">🔄 更新匯率中...</span>
+  <div class="card">
+    <label>帳本名稱 (顯示於卡片)</label>
+    <input type="text" id="ledger-name" placeholder="例如：我的記帳本">
   </div>
 
-  <h3>付款方式 <span style="font-size:12px; font-weight:normal; color:#aaa">(最多6種)</span></h3>
-  <div id="payments-list" class="tag-box"></div>
-  <div class="add-row">
-    <input type="text" id="new-payment" placeholder="如 富邦J卡">
-    <button type="button" class="btn-add" onclick="add('payments-list', 'new-payment', 6)">＋</button>
+  <div class="card">
+    <label>預設幣別</label>
+    <select id="currency-select">
+        <option value="TWD">TWD (新台幣)</option>
+        <option value="JPY">JPY (日圓)</option>
+        <option value="USD">USD (美元)</option>
+        <option value="EUR">EUR (歐元)</option>
+        <option value="KRW">KRW (韓元)</option>
+        <option value="CNY">CNY (人民幣)</option>
+        <option value="THB">THB (泰銖)</option>
+    </select>
   </div>
 
-  <h3>項目分類 <span style="font-size:12px; font-weight:normal; color:#aaa">(最多8種)</span></h3>
-  <div id="categories-list" class="tag-box"></div>
-  <div class="add-row">
-    <input type="text" id="new-category" placeholder="如 交通, 住宿">
-    <button type="button" class="btn-add" onclick="add('categories-list', 'new-category', 8)">＋</button>
+  <div class="card">
+    <label>成員名單 (用於分帳)</label>
+    <div id="members-tags" class="tags-container"></div>
+    <div class="input-row">
+       <input type="text" id="new-member" placeholder="輸入名字...">
+       <button class="btn-add" onclick="add('members-tags', 'new-member', 10)">＋</button>
+    </div>
   </div>
+
+  <div class="card">
+    <label>消費分類</label>
+    <div id="categories-tags" class="tags-container"></div>
+    <div class="input-row">
+       <input type="text" id="new-category" placeholder="輸入分類...">
+       <button class="btn-add" onclick="add('categories-tags', 'new-category', 20)">＋</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>付款方式</label>
+    <div id="payments-tags" class="tags-container"></div>
+    <div class="input-row">
+       <input type="text" id="new-payment" placeholder="輸入方式...">
+       <button class="btn-add" onclick="add('payments-tags', 'new-payment', 10)">＋</button>
+    </div>
+  </div>
+
 </div>
 
-<button class="btn-save" id="save-btn" onclick="save()">💾 儲存設定</button>
+<div class="footer">
+  <button class="btn-main" id="save-btn" onclick="save()">儲存設定</button>
+</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  // 🔴 這裡請填入正確資訊
-  const MY_LIFF_ID = "2009010836-1OaNzGM2"; 
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec"; 
+  // 🔴 請確認 LIFF_ID 是否正確 (Settings 的 ID)
+  const LIFF_ID = "YOUR_LIFF_ID_SETTINGS"; 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec";
 
-  var store = { m: [], p: [], c: [] };
-  var currentUserId = "";
+  let settingsData = { members: [], categories: [], payments: [], currency: "TWD", ledgerName: "" };
+  let currentUserId = "";
 
   window.onload = function() {
-    liff.init({ liffId: MY_LIFF_ID }).then(() => {
-        if (!liff.isLoggedIn()) { liff.login(); return; }
-        liff.getProfile().then(profile => {
-          currentUserId = profile.userId;
-          document.getElementById('loading-text').innerText = "讀取設定中...";
-          fetchData(currentUserId);
-        });
-    }).catch(err => { alert("LIFF 初始化失敗: " + err); });
+    // 1. 套用主題 (從 localStorage 讀取 Record 頁面設定的主題)
+    applyTheme();
+
+    // 2. LIFF 初始化
+    liff.init({ liffId: LIFF_ID }).then(() => {
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+      liff.getProfile().then(profile => {
+        currentUserId = profile.userId;
+        loadSettings();
+      });
+    }).catch(err => {
+      alert("LIFF Init Error: " + err);
+    });
   };
 
-  function fetchData(uid) {
-    fetch(GAS_API_URL, {
+  function applyTheme() {
+      const savedColor = localStorage.getItem('app-color') || 'green';
+      const savedDark = localStorage.getItem('app-dark') === 'true';
+      document.body.setAttribute('data-color', savedColor);
+      if (savedDark) document.body.classList.add('dark-mode');
+  }
+
+  function loadSettings() {
+    fetch(GAS_URL, {
       method: 'POST',
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: 'getSettings', userId: uid })
+      body: JSON.stringify({ action: 'getSettings', userId: currentUserId })
     })
-    .then(response => response.text())
-    .then(text => {
-      try {
-        const res = JSON.parse(text);
-        if (res.success) {
-          var d = res.data;
-          store.m = d.members || [];
-          store.p = d.payments || [];
-          store.c = d.categories || [];
-          
-          document.getElementById('ledger-title').innerText = d.ledgerName;
-          
-          // 🔥 設定幣別選單邏輯
-          setCurrencyUI(d.currency);
-          
-          document.getElementById('rate').value = d.rate;
-          
-          render('members-list', store.m);
-          render('payments-list', store.p);
-          render('categories-list', store.c);
-          
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('main-ui').style.display = 'block';
-          document.getElementById('save-btn').style.display = 'block';
-        } else {
-          alert("讀取失敗: " + res.error);
-        }
-      } catch (e) {
-        console.error("RAW RESPONSE:", text);
-        alert("GAS 連線錯誤:\n" + text.replace(/<[^>]*>?/gm, '').substring(0, 200));
+    .then(r => r.json())
+    .then(res => {
+      if(res.success) {
+        settingsData = res.data;
+        document.getElementById('ledger-name').value = settingsData.ledgerName || "";
+        document.getElementById('currency-select').value = settingsData.currency || "TWD";
+        
+        renderTags('members-tags', settingsData.members);
+        renderTags('categories-tags', settingsData.categories);
+        renderTags('payments-tags', settingsData.payments);
+        
+        document.getElementById('loading').style.opacity = '0';
+        setTimeout(() => document.getElementById('loading').style.display = 'none', 300);
+      } else {
+        alert("讀取失敗: " + res.error);
       }
     })
-    .catch(err => alert("網路連線錯誤: " + err));
+    .catch(e => alert("連線錯誤: " + e));
   }
 
-  // 🔥 新增功能：處理幣別選單變化
-  function onCurrencyChange() {
-    var select = document.getElementById('currency-select');
-    var otherInput = document.getElementById('currency-other');
-    var val = select.value;
+  function renderTags(containerId, list) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+    list.forEach((item, index) => {
+       // 產生標籤 HTML
+       const tag = document.createElement('div');
+       tag.className = 'tag';
+       tag.innerHTML = `${item} <span class="rm" onclick="removeTag('${containerId}', ${index})">×</span>`;
+       container.appendChild(tag);
+    });
+  }
 
-    if (val === "OTHER") {
-      otherInput.style.display = "block"; // 顯示自訂格子
-      otherInput.value = "";
-      otherInput.focus();
-    } else {
-      otherInput.style.display = "none"; // 隱藏自訂格子
-      updateRate(val); // 自動抓匯率
+  function add(containerId, inputId, limit) {
+    const input = document.getElementById(inputId);
+    const val = input.value.trim();
+    if(!val) return;
+
+    let list = getListByContainer(containerId);
+    if(list.includes(val)) { alert("已經有這個項目了"); return; }
+    if(list.length >= limit) { alert("項目數量已達上限"); return; }
+
+    list.push(val);
+    renderTags(containerId, list);
+    input.value = "";
+  }
+
+  // 因為 removeTag 是動態生成的 HTML 呼叫的，需要掛在 window 下
+  window.removeTag = function(containerId, index) {
+    let list = getListByContainer(containerId);
+    if(list.length <= 1 && containerId !== 'payments-tags') { 
+        alert("至少要保留一個項目喔！"); return; 
     }
-  }
+    list.splice(index, 1);
+    renderTags(containerId, list);
+  };
 
-  // 當使用者在「其他」格子輸入完畢後抓匯率
-  function updateRateFromOther() {
-    var val = document.getElementById('currency-other').value.toUpperCase();
-    if (val.length === 3) {
-       updateRate(val);
-    }
-  }
-
-  // 🔥 新增功能：呼叫外部 API 抓匯率
-  function updateRate(currencyCode) {
-    if (!currencyCode || currencyCode === "TWD") {
-       document.getElementById('rate').value = 1;
-       return;
-    }
-
-    var loadingMsg = document.getElementById('fetching-msg');
-    loadingMsg.style.display = "inline"; // 顯示轉圈文字
-
-    // 使用免費的 ExchangeRate-API
-    fetch('https://api.exchangerate-api.com/v4/latest/' + currencyCode)
-      .then(res => res.json())
-      .then(data => {
-         // 找出對 TWD 的匯率
-         var rateToTwd = data.rates.TWD;
-         if (rateToTwd) {
-            document.getElementById('rate').value = rateToTwd;
-         } else {
-            alert("找不到此幣別匯率，請手動輸入");
-         }
-      })
-      .catch(err => {
-         console.log("匯率抓取失敗", err);
-         // 失敗不跳 Alert 干擾，讓使用者自己填
-      })
-      .finally(() => {
-         loadingMsg.style.display = "none"; // 隱藏轉圈文字
-      });
-  }
-
-  // 初始化時，根據後端傳來的幣別設定 UI
-  function setCurrencyUI(savedCurrency) {
-     var select = document.getElementById('currency-select');
-     var otherInput = document.getElementById('currency-other');
-     
-     // 檢查這個幣別有沒有在我們的選單裡
-     var exists = false;
-     for (var i = 0; i < select.options.length; i++) {
-        if (select.options[i].value === savedCurrency) {
-           exists = true;
-           break;
-        }
-     }
-
-     if (exists) {
-        select.value = savedCurrency;
-        otherInput.style.display = "none";
-     } else {
-        select.value = "OTHER";
-        otherInput.style.display = "block";
-        otherInput.value = savedCurrency;
-     }
+  function getListByContainer(id) {
+     if(id === 'members-tags') return settingsData.members;
+     if(id === 'categories-tags') return settingsData.categories;
+     if(id === 'payments-tags') return settingsData.payments;
+     return [];
   }
 
   function save() {
-    var btn = document.getElementById('save-btn');
+    const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.innerText = "儲存中...";
-    
-    // 🔥 判斷最終幣別是選單的還是自訂的
-    var selectVal = document.getElementById('currency-select').value;
-    var finalCurrency = selectVal;
-    
-    if (selectVal === "OTHER") {
-       finalCurrency = document.getElementById('currency-other').value.trim().toUpperCase();
-       if (!finalCurrency) finalCurrency = "TWD"; // 防呆
-    }
 
-    var payload = {
-       members: store.m, payments: store.p, categories: store.c,
-       currency: finalCurrency, rate: document.getElementById('rate').value
+    const payload = {
+       ledgerName: document.getElementById('ledger-name').value,
+       currency: document.getElementById('currency-select').value,
+       members: settingsData.members,
+       categories: settingsData.categories,
+       payments: settingsData.payments
     };
 
-    fetch(GAS_API_URL, {
+    fetch(GAS_URL, {
       method: 'POST',
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action: 'saveSettings', userId: currentUserId, data: payload })
     })
-    .then(response => response.text())
-    .then(text => {
-       try {
-         const res = JSON.parse(text);
-         if(res.success) {
-            alert("✅ 設定已儲存！");
-            liff.closeWindow();
-         } else {
-            alert("❌ 失敗: " + res.error);
-            btn.disabled = false; btn.innerText = "💾 儲存設定";
-         }
-       } catch (e) {
-         alert("⚠️ 儲存錯誤:\n" + text.replace(/<[^>]*>?/gm, '').substring(0, 200));
-         btn.disabled = false; btn.innerText = "💾 儲存設定";
+    .then(r => r.json())
+    .then(res => {
+       if(res.success) {
+          alert("✅ 設定已更新！\n(請重新開啟記帳頁面以套用新設定)");
+          liff.closeWindow();
+       } else {
+          alert("儲存失敗: " + res.error);
+          btn.disabled = false; btn.innerText = "儲存設定";
        }
     })
-    .catch(err => {
-       alert("連線錯誤: " + err);
-       btn.disabled = false; btn.innerText = "💾 儲存設定";
+    .catch(e => {
+       alert("錯誤: " + e);
+       btn.disabled = false; btn.innerText = "儲存設定";
     });
-  }
-
-  function render(id, arr) {
-    var el = document.getElementById(id);
-    el.innerHTML = "";
-    arr.forEach(function(item, i) {
-      el.innerHTML += '<div class="tag">' + item + '<span class="rm" onclick="rm(\''+id+'\','+i+')">×</span></div>';
-    });
-  }
-  function add(id, inputId, limit) {
-    var input = document.getElementById(inputId);
-    var val = input.value.trim();
-    var key = (id==='members-list')?'m':(id==='payments-list')?'p':'c';
-    if(val && store[key].length < limit) {
-       store[key].push(val); render(id, store[key]); input.value = "";
-    }
-  }
-  function rm(id, idx) {
-    var key = (id==='members-list')?'m':(id==='payments-list')?'p':'c';
-    store[key].splice(idx, 1); render(id, store[key]);
   }
 </script>
 </body>
 </html>
-
-
