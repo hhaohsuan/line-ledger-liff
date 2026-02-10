@@ -69,7 +69,23 @@
     input:focus, select:focus, textarea:focus { background: var(--card-bg); border-color: var(--primary); outline: none; }
     
     #amount-input { font-size: 28px; font-weight: bold; color: var(--primary); text-align: right; padding-right: 15px; }
-    .calc-icon { position: absolute; left: 15px; color: #ccc; font-size: 20px; }
+    /* 修正後的金額符號樣式 */
+    .calc-icon { 
+        position: absolute; 
+        left: 15px; 
+        top: 50%; /* 垂直置中 */
+        transform: translateY(-50%);
+        color: var(--primary); /* 讓它跟著主題色變，或改用 #555 */
+        font-size: 24px; /* 🔥 放大字體 */
+        font-weight: bold;
+        z-index: 2; /* 確保在最上層 */
+        pointer-events: none; /* 點擊時穿透到 input */
+    }
+    
+    /* 配合符號放大，輸入框的左邊距也要推開一點 */
+    #amount-input { 
+        padding-left: 60px; /*原本可能比較小，改成 60px 避免擋住 */
+    }
 
     .currency-toggle { display: flex; gap: 10px; margin-bottom: 15px; }
     .c-btn { flex: 1; padding: 10px; text-align: center; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-weight: 500; color: var(--text-sub); background: var(--card-bg); transition: 0.2s; }
@@ -160,7 +176,7 @@
 
     <label>金額</label>
     <div class="input-group">
-      <span class="calc-icon">﹩</span>
+      <span class="calc-icon">NT$</span>
       <input type="text" id="amount-input" class="input-readonly" placeholder="0" 
              readonly onclick="openCalculator()">
     </div>
@@ -342,10 +358,24 @@
     updateTwdInputVisibility();
   }
 
+  // 定義幣別符號對照表
+  const currencySymbols = {
+    'TWD': 'NT$', 'USD': '$', 'JPY': '¥', 'KRW': '₩', 
+    'EUR': '€', 'GBP': '£', 'CNY': '¥', 'THB': '฿', 'VND': '₫'
+  };
+
   function setCurrency(code, btnElement) {
     currentCurrency = code;
+    
+    // 1. 更新按鈕樣式
     document.querySelectorAll('.c-btn').forEach(b => b.classList.remove('active'));
-    btnElement.classList.add('active');
+    if(btnElement) btnElement.classList.add('active');
+
+    // 2. 🔥 [新增] 更新輸入框左邊的符號
+    const symbol = currencySymbols[code] || '$'; // 找不到就預設 $
+    document.querySelector('.calc-icon').innerText = symbol;
+
+    // 3. 控制台幣輸入框顯示
     updateTwdInputVisibility();
   }
 
@@ -393,8 +423,7 @@
       row.innerHTML = `
         <div class="user-info" onclick="toggleSplitMember(${idx})">
            <div class="checkbox ${isChecked?'checked':''}" id="chk-${idx}"></div>
-           <div class="avatar">${initial}</div>
-           <div class="user-name">${member}</div>
+           <div class="user-name" style="font-size:16px;">${member}</div>
         </div>
         <div class="split-input-group">
            <input type="number" class="${inputClass}" id="amt-${idx}" 
