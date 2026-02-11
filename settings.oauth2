@@ -169,8 +169,8 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
   // 🔴 請確認 LIFF_ID (Settings 的 ID)
-  const LIFF_ID = "2009010836-1OaNzGM2"; 
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec";
+  const LIFF_ID = "2009010836-7Sue2k9M"; 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxuB_TDCYEM_e5hol_1DMwxyIw62sAzY4jsqfu7-9QtzvtnSQj-0qeXON84RY14rBD9vA/exec";
 
   let settingsData = { members: [], categories: [], payments: [], currency: "TWD", ledgerName: "" };
   let currentUserId = "";
