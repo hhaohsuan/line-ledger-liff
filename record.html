@@ -68,13 +68,23 @@
     }
     input:focus, select:focus, textarea:focus { background: var(--card-bg); border-color: var(--primary); outline: none; }
     
-    #amount-input { font-size: 28px; font-weight: bold; color: var(--primary); text-align: right; padding-right: 15px; padding-left: 60px; }
-    
+    #amount-input { font-size: 28px; font-weight: bold; color: var(--primary); text-align: right; padding-right: 15px; }
     /* 修正後的金額符號樣式 */
     .calc-icon { 
-        position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
-        color: var(--primary); font-size: 24px; font-weight: bold;
-        z-index: 2; pointer-events: none;
+        position: absolute; 
+        left: 15px; 
+        top: 50%; /* 垂直置中 */
+        transform: translateY(-50%);
+        color: var(--primary); /* 讓它跟著主題色變，或改用 #555 */
+        font-size: 24px; /* 🔥 放大字體 */
+        font-weight: bold;
+        z-index: 2; /* 確保在最上層 */
+        pointer-events: none; /* 點擊時穿透到 input */
+    }
+    
+    /* 配合符號放大，輸入框的左邊距也要推開一點 */
+    #amount-input { 
+        padding-left: 60px; /*原本可能比較小，改成 60px 避免擋住 */
     }
 
     .currency-toggle { display: flex; gap: 10px; margin-bottom: 15px; }
@@ -118,7 +128,7 @@
     .status-ok { color: var(--primary); font-weight: bold; }
     .status-err { color: var(--red); font-weight: bold; }
 
-    /* 計算機樣式 */
+    /* 計算機樣式 (暗黑模式適配) */
     .calc-overlay { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--bg); border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.3); transition: bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1000; padding: 15px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
     .calc-overlay.show { bottom: 0; }
     .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, 1fr); gap: 10px; height: 380px; }
@@ -255,53 +265,45 @@
   let settings = { members: [], categories: [], payments: [], currency: "TWD" };
   let currentCurrency = "TWD";
   let splitMode = "EVEN"; // "EVEN" (勾選) 或 "CUSTOM" (手輸)
-  
-  // 🔥 [新增] 全域變數
-  let targetId = "";       // 用來存群組 ID 或 個人 ID
-  let currentUserName = ""; // 用來存目前使用者的 LINE 顯示名稱
+  let userId = "";
 
   window.onload = function() {
-    // 1. 初始化時間
+    // 1. 初始化時間 (解決時區問題)
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('date-input').value = now.toISOString().slice(0,16);
 
-    // 2. 讀取主題
+    // 2. 讀取儲存的主題
     initTheme();
 
-    // 3. 🔥 [修改] 優先從網址抓 targetId
-    const urlParams = new URLSearchParams(window.location.search);
-    targetId = urlParams.get('targetId');
-
-    // 4. LIFF 初始化
-    liff.init({ liffId: LIFF_ID }).then(async () => {
+    // 3. LIFF 初始化
+    liff.init({ liffId: LIFF_ID }).then(() => {
         if (!liff.isLoggedIn()) { liff.login(); return; }
-        
-        // 取得個人資料
-        const profile = await liff.getProfile();
-        currentUserName = profile.displayName; // 🔥 存起來等一下用
-
-        // 如果網址沒帶 ID，預設使用個人 ID
-        if (!targetId) {
-            targetId = profile.userId;
-        }
-        
-        loadData();
+        liff.getProfile().then(profile => {
+            userId = profile.userId;
+            loadData();
+        });
     });
   };
 
-  // --- 🎨 主題控制邏輯 (維持不變) ---
+  // --- 🎨 主題控制邏輯 ---
   function initTheme() {
       const savedColor = localStorage.getItem('app-color') || 'green';
       const savedDark = localStorage.getItem('app-dark') === 'true';
+      
+      // 套用顏色
       document.body.setAttribute('data-color', savedColor);
       document.getElementById('theme-select').value = savedColor;
+      
+      // 套用暗黑模式
       if (savedDark) document.body.classList.add('dark-mode');
   }
+
   function changeColor(color) {
       document.body.setAttribute('data-color', color);
       localStorage.setItem('app-color', color);
   }
+
   function toggleDarkMode() {
       document.body.classList.toggle('dark-mode');
       const isDark = document.body.classList.contains('dark-mode');
@@ -310,15 +312,19 @@
 
   async function loadData() {
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // 1. 檢查是否有 row (編輯舊資料模式)
     const editRow = urlParams.get('row');
+    
+    // 2. 檢查是否有 mode=prefill (AI 圖片記帳預填模式)
     const isPrefill = urlParams.get('mode') === 'prefill';
+
     const action = editRow ? 'getEditData' : 'getSettings';
 
     try {
-      // 🔥 [修改] 這裡傳送的是 targetId (放在 userId 欄位給後端辨識)
       const res = await fetch(GAS_URL, { 
           method: 'POST', 
-          body: JSON.stringify({ action: action, userId: targetId, row: editRow }) 
+          body: JSON.stringify({ action: action, userId: userId, row: editRow }) 
       }).then(r=>r.json());
 
       if(res.success) {
@@ -329,34 +335,29 @@
          renderCurrencyUI(settings.currency);
          renderSplitList();
          
-         // 🅰️ 編輯舊資料
+         // 🅰️ 情況一：編輯舊資料 (從 Sheet 讀取)
          if(editRow && res.record) {
              fillForm(res.record);
          } 
-         // 🅱️ AI 預填
+         // 🅱️ 情況二：AI 預填資料 (從網址讀取) 🔥🔥🔥 這裡是新增的關鍵！
          else if (isPrefill) {
              const prefillData = {
                  item: urlParams.get('item') || "",
                  amount: urlParams.get('amount') || "",
-                 date: urlParams.get('date') || "",
+                 date: urlParams.get('date') || "", // 注意：這裡是日期字串
                  category: urlParams.get('category') || settings.categories[0],
                  method: urlParams.get('method') || settings.payments[0],
                  note: urlParams.get('note') || "",
-                 currency: settings.currency,
-                 payer: settings.members[0],
+                 currency: settings.currency, // 預設用主幣別
+                 payer: settings.members[0], // 預設第一人
                  split: urlParams.get('split') || ""
              };
+             // 呼叫 fillForm 把資料填進去
              fillForm(prefillData);
          }
-         // 🆎 全新記帳
+         // 🆎 情況三：全新記帳
          else {
-            // 🔥 [新增] 自動選人邏輯
-            const payerSelect = document.getElementById('payer-select');
-            if (settings.members.includes(currentUserName)) {
-                payerSelect.value = currentUserName;
-            } else if (settings.members.length > 0) {
-                payerSelect.value = settings.members[0];
-            }
+            if(settings.members.length > 0) document.getElementById('payer-select').value = settings.members[0];
             toggleSelectAll(true); // 預設全選
          }
       }
@@ -368,9 +369,6 @@
     el.innerHTML = "";
     (list||[]).forEach(i => el.innerHTML += `<option value="${i}">${i}</option>`);
   }
-
-  // ... (中間的 UI 函式如 renderCurrencyUI, toggleSplitMode, updateSplitMath 等均保持完全一樣，省略以節省篇幅) ...
-  // ... (這些函式直接沿用原本的即可) ...
 
   function renderCurrencyUI(mainCurrency) {
     const box = document.getElementById('currency-box');
@@ -390,14 +388,24 @@
     updateTwdInputVisibility();
   }
 
-  const currencySymbols = { 'TWD': 'NT$', 'USD': '$', 'JPY': '¥', 'KRW': '₩', 'EUR': '€', 'GBP': '£', 'CNY': '¥', 'THB': '฿', 'VND': '₫' };
+  // 定義幣別符號對照表
+  const currencySymbols = {
+    'TWD': 'NT$', 'USD': '$', 'JPY': '¥', 'KRW': '₩', 
+    'EUR': '€', 'GBP': '£', 'CNY': '¥', 'THB': '฿', 'VND': '₫'
+  };
 
   function setCurrency(code, btnElement) {
     currentCurrency = code;
+    
+    // 1. 更新按鈕樣式
     document.querySelectorAll('.c-btn').forEach(b => b.classList.remove('active'));
     if(btnElement) btnElement.classList.add('active');
-    const symbol = currencySymbols[code] || '$';
+
+    // 2. 🔥 [新增] 更新輸入框左邊的符號
+    const symbol = currencySymbols[code] || '$'; // 找不到就預設 $
     document.querySelector('.calc-icon').innerText = symbol;
+
+    // 3. 控制台幣輸入框顯示
     updateTwdInputVisibility();
   }
 
@@ -420,22 +428,28 @@
     finally { document.getElementById('predict-loading').style.display = 'none'; }
   }
 
+  // --- 分帳核心邏輯 ---
   function renderSplitList() {
     const list = document.getElementById('split-list');
     const oldHtml = list.innerHTML;
     list.innerHTML = "";
+    
     settings.members.forEach((member, idx) => {
       let isChecked = true;
       let existingVal = "";
+
       if (oldHtml) {
          const oldChk = document.getElementById(`chk-${idx}`);
          const oldInp = document.getElementById(`amt-${idx}`);
          if (oldChk) isChecked = oldChk.classList.contains('checked');
          if (oldInp) existingVal = oldInp.value;
       }
+
       const row = document.createElement('div');
       row.className = "split-row";
+      const initial = member.substring(0,1);
       const inputClass = existingVal ? "split-amount has-value" : "split-amount";
+
       row.innerHTML = `
         <div class="user-info" onclick="toggleSplitMember(${idx})">
            <div class="checkbox ${isChecked?'checked':''}" id="chk-${idx}"></div>
@@ -458,9 +472,10 @@
   }
 
   function toggleSplitMember(idx) {
-    if (splitMode !== "EVEN") return;
+    if (splitMode !== "EVEN") return; // 手動模式不給勾
     const chk = document.getElementById(`chk-${idx}`);
     chk.classList.toggle('checked');
+    
     if (!chk.classList.contains('checked')) {
         const inp = document.getElementById(`amt-${idx}`);
         inp.value = "";
@@ -472,6 +487,7 @@
   function onSplitInput(idx) {
     const inp = document.getElementById(`amt-${idx}`);
     const chk = document.getElementById(`chk-${idx}`);
+    
     if (inp.value !== "") {
         chk.classList.add('checked');
         inp.classList.add('has-value');
@@ -483,6 +499,7 @@
 
   function toggleSelectAll(forceSelect = null) {
     if (splitMode !== "EVEN") return;
+
     const allChecks = document.querySelectorAll('.checkbox');
     let shouldSelectAll = true;
     if (forceSelect === null) {
@@ -491,6 +508,7 @@
     } else {
        shouldSelectAll = forceSelect;
     }
+
     allChecks.forEach((c, i) => {
        if(shouldSelectAll) c.classList.add('checked');
        else {
@@ -517,34 +535,57 @@
   function updateSplitMath() {
     const total = parseFloat(document.getElementById('amount-input').value) || 0;
     document.getElementById('total-display').innerText = total;
+
     let manualSum = 0;
     let autoCount = 0;
+
     settings.members.forEach((m, i) => {
        const chk = document.getElementById(`chk-${i}`);
        const inp = document.getElementById(`amt-${i}`);
        const isChecked = chk.classList.contains('checked');
        const valStr = inp.value;
+
        if (isChecked) {
-           if (valStr !== "") { manualSum += parseFloat(valStr); } else { autoCount++; }
+           if (valStr !== "") {
+               manualSum += parseFloat(valStr);
+           } else {
+               autoCount++;
+           }
        }
     });
+
     const remaining = total - manualSum;
     const perPerson = autoCount > 0 ? Math.round((remaining / autoCount) * 100) / 100 : 0;
+
     settings.members.forEach((m, i) => {
        const chk = document.getElementById(`chk-${i}`);
        const inp = document.getElementById(`amt-${i}`);
        const isChecked = chk.classList.contains('checked');
        const valStr = inp.value;
-       if (!isChecked) { inp.placeholder = "不參與"; } 
-       else if (valStr === "") { inp.placeholder = perPerson; }
+
+       if (!isChecked) {
+           inp.placeholder = "不參與";
+       } else if (valStr === "") {
+           inp.placeholder = perPerson;
+       }
     });
+
     const infoEl = document.getElementById('remainder-display');
     if (autoCount === 0) {
-        if (Math.abs(remaining) < 0.1) { infoEl.innerText = "完美分配"; infoEl.className = "status-ok"; } 
-        else { infoEl.innerText = remaining > 0 ? `還有 ${remaining} 未分` : `超支 ${Math.abs(remaining)}`; infoEl.className = "status-err"; }
+        if (Math.abs(remaining) < 0.1) {
+            infoEl.innerText = "完美分配"; infoEl.className = "status-ok";
+        } else {
+            infoEl.innerText = remaining > 0 ? `還有 ${remaining} 未分` : `超支 ${Math.abs(remaining)}`;
+            infoEl.className = "status-err";
+        }
     } else {
-        if (remaining < 0) { infoEl.innerText = `超支 ${Math.abs(remaining)} (請修正)`; infoEl.className = "status-err"; } 
-        else { infoEl.innerText = `剩餘 ${remaining} 給 ${autoCount} 人均分`; infoEl.className = "status-ok"; }
+        if (remaining < 0) {
+            infoEl.innerText = `超支 ${Math.abs(remaining)} (請修正)`;
+            infoEl.className = "status-err";
+        } else {
+            infoEl.innerText = `剩餘 ${remaining} 給 ${autoCount} 人均分`;
+            infoEl.className = "status-ok";
+        }
     }
   }
 
@@ -552,11 +593,14 @@
     let hasManualInput = false;
     let checkedCount = 0;
     const totalMembers = settings.members.length;
+
     settings.members.forEach((m, i) => {
         if (document.getElementById(`amt-${i}`).value !== "") hasManualInput = true;
         if (document.getElementById(`chk-${i}`).classList.contains('checked')) checkedCount++;
     });
+
     if (checkedCount === totalMembers && !hasManualInput) return "均分";
+    
     if (checkedCount === 1 && !hasManualInput) {
         let name = "";
         settings.members.forEach((m, i) => {
@@ -564,12 +608,16 @@
         });
         return "都" + name + "的";
     }
+
+    // 🔥 [修正] 如果沒人勾選，回傳 "" (空字串)，這樣寫入 Sheet 就會是空的
     if (checkedCount === 0) return "";
+
     let parts = [];
     settings.members.forEach((m, i) => {
         const chk = document.getElementById(`chk-${i}`);
         const inp = document.getElementById(`amt-${i}`);
         const valStr = inp.value;
+
         if (chk.classList.contains('checked')) {
             if (valStr !== "") parts.push(`${m}的${valStr}`);
         } else {
@@ -579,22 +627,38 @@
     return parts.join("、");
   }
 
+  // ✅ 編輯模式回填 (修正日期時間回填問題)
   function fillForm(record) {
+     // 🔥 [修正] 先檢查網址有沒有 'row='
+     // 如果有，代表是「修改舊帳」，抓行號。
+     // 如果沒有，代表是「AI 新記帳」，設為空字串 (後端就會知道是新增)。
      if (window.location.search.indexOf('row=') > -1) {
          document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
      } else {
          document.getElementById('edit-row-index').value = ""; 
      }
+     
+     // 🔥 [關鍵修正] 處理日期回填
+     // 🔥 日期回填邏輯 (相容網址傳參)
      if (record.date) {
          try {
-             let dateStr = decodeURIComponent(record.date).replace(" ", "T"); 
+             // 嘗試解決網址編碼問題 (如果有的話)
+             let dateStr = decodeURIComponent(record.date);
+             // 處理 "2026-02-10 12:00" 這種中間有空格的格式，把它換成 "T"
+             dateStr = dateStr.replace(" ", "T"); 
+             
              let dateObj = new Date(dateStr);
+             
              if (!isNaN(dateObj.getTime())) {
+                 // 修正時區偏移
                  dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
                  document.getElementById('date-input').value = dateObj.toISOString().slice(0,16);
              }
-         } catch (e) { console.error("日期解析失敗", e); }
+         } catch (e) {
+             console.error("日期解析失敗", e);
+         }
      }
+
      document.getElementById('item-input').value = record.item;
      document.getElementById('amount-input').value = record.amount;
      document.getElementById('category-select').value = record.category;
@@ -609,39 +673,66 @@
 
      if(record.amountTWD) document.getElementById('amount-twd-input').value = record.amountTWD;
 
+     // 🔥 [修正] 讀取時，如果內容是空的，就維持空字串
      const splitText = record.split || "";
+     
      resetSplit();
-     if (splitText === "均分") {} 
-     else if (splitText === "") { toggleSelectAll(false); }
+
+     if (splitText === "均分") {
+        // 維持全選 (resetSplit 預設就是全選)
+     } 
+     else if (splitText === "") {
+        // 🔥 [修正] 明確執行全取消
+        toggleSelectAll(false);
+     }
      else if (splitText.startsWith("都") && splitText.endsWith("的")) {
         const name = splitText.substring(1, splitText.length - 1);
         toggleSelectAll(false);
         settings.members.forEach((m, i) => {
             if (m === name) document.getElementById(`chk-${i}`).classList.add('checked');
         });
-     } else {
-        splitMode = "CUSTOM"; toggleSelectAll(false);
+     } 
+     else {
+        // 自訂模式
+        splitMode = "CUSTOM"; 
+        toggleSelectAll(false); // 先全取消
+        
         const parts = splitText.split("、");
-        settings.members.forEach((m, i) => document.getElementById(`amt-${i}`).value = "");
+        // 清空輸入框
+        settings.members.forEach((m, i) => {
+             document.getElementById(`amt-${i}`).value = "";
+        });
+
         parts.forEach(part => {
+           // 支援 "A的100" 格式
            const [name, amount] = part.split("的");
            if (name && amount !== undefined) {
               const idx = settings.members.indexOf(name);
               if (idx !== -1) {
                   const val = parseFloat(amount);
-                  document.getElementById(`amt-${idx}`).value = val;
-                  if (val > 0) document.getElementById(`amt-${idx}`).classList.add('has-value');
-                  document.getElementById(`chk-${idx}`).classList.add('checked');
+                  const inp = document.getElementById(`amt-${idx}`);
+                  const chk = document.getElementById(`chk-${idx}`);
+                  
+                  inp.value = val;
+                  if (val > 0) inp.classList.add('has-value');
+                  chk.classList.add('checked');
               }
            }
         });
      }
+     
      updateSplitMath();
   }
 
-  // --- 計算機邏輯 (保持不變) ---
-  function openCalculator() { document.getElementById('custom-calculator').classList.add('show'); const el = document.getElementById('amount-input'); if(el.value === "0") el.value = ""; }
-  function closeCalculator() { document.getElementById('custom-calculator').classList.remove('show'); }
+  // --- 計算機 ---
+  function openCalculator() {
+    document.getElementById('custom-calculator').classList.add('show');
+    const el = document.getElementById('amount-input');
+    if(el.value === "0") el.value = "";
+  }
+  function closeCalculator() {
+    document.getElementById('custom-calculator').classList.remove('show');
+  }
   function calcAppend(val) {
     const el = document.getElementById('amount-input');
     if (val === 'AC') { el.value = ""; } 
@@ -649,7 +740,9 @@
     else {
       const lastChar = el.value.slice(-1);
       const isOp = ['+','-','*','/'].includes(val);
-      if (isOp && ['+','-','*','/'].includes(lastChar)) { el.value = el.value.slice(0, -1) + val; } else { el.value += val; }
+      if (isOp && ['+','-','*','/'].includes(lastChar)) {
+         el.value = el.value.slice(0, -1) + val;
+      } else { el.value += val; }
     }
   }
   function calcDone() {
@@ -658,7 +751,8 @@
       if (el.value) {
         let safeValue = el.value.replace(/[+\-*/]*$/, '');
         const result = new Function('return ' + safeValue)(); 
-        if (!isFinite(result) || isNaN(result)) { el.value = "0"; } else { el.value = Math.round(result * 100) / 100; }
+        if (!isFinite(result) || isNaN(result)) { el.value = "0"; } 
+        else { el.value = Math.round(result * 100) / 100; }
         updateSplitMath(); 
       }
     } catch (e) { alert("算式錯誤"); el.value = ""; }
@@ -685,10 +779,9 @@
     btn.disabled = true; btn.innerText = "儲存中...";
 
     if (liff.isInClient()) {
-        // 🔥 [修改] 傳送 targetId 作為 userId，確保後端寫入正確的 Sheet
         fetch(GAS_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'saveTransaction', userId: targetId, data: payload, useCache: true })
+          body: JSON.stringify({ action: 'saveTransaction', userId: userId, data: payload, useCache: true })
         })
         .then(r => r.json())
         .then(res => {
@@ -700,10 +793,9 @@
         })
         .catch(e => { alert("網路錯誤: " + e); btn.disabled = false; btn.innerText = "確認儲存"; });
     } else {
-        // 🔥 [修改] 傳送 targetId
         fetch(GAS_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'saveTransaction', userId: targetId, data: payload })
+          body: JSON.stringify({ action: 'saveTransaction', userId: userId, data: payload })
         })
         .then(r=>r.json())
         .then(res => {
