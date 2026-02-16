@@ -5,111 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>記一筆</title>
   <style>
-    /* ✅ 全域設定 */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-    /* --- 🎨 主題變數系統 --- */
-    :root {
-      --primary: #06c755;
-      --primary-light: #e8f9ee;
-      --bg: #f7f9fc;
-      --card-bg: #ffffff;
-      --text: #333333;
-      --text-sub: #888888;
-      --border: #e1e5eb;
-      --input-bg: #f9f9f9;
-      --red: #ff4b4b;
-    }
-
-    /* 主題色系 */
+    :root { --primary: #06c755; --primary-light: #e8f9ee; --bg: #f7f9fc; --card-bg: #ffffff; --text: #333333; --text-sub: #888888; --border: #e1e5eb; --input-bg: #f9f9f9; --red: #ff4b4b; }
     body[data-color="blue"] { --primary: #007bff; --primary-light: #e6f2ff; }
     body[data-color="purple"] { --primary: #8e44ad; --primary-light: #f4ecf7; }
     body[data-color="orange"] { --primary: #ff9800; --primary-light: #fff3e0; }
     body[data-color="pink"] { --primary: #ff6b81; --primary-light: #ffeef0; }
-
-    /* 🌙 暗黑模式 */
-    body.dark-mode {
-      --bg: #121212; --card-bg: #1e1e1e;
-      --text: #e0e0e0; --text-sub: #aaaaaa;
-      --border: #333333; --input-bg: #2c2c2c;
-    }
-
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: var(--text); transition: background 0.3s, color 0.3s; }
-    
-    /* Header */
-    .header { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 1px 0 var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s; }
+    body.dark-mode { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --text-sub: #aaaaaa; --border: #333333; --input-bg: #2c2c2c; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: var(--text); }
+    .header { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 1px 0 var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
     .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
-    
     .settings-area { display: flex; gap: 10px; align-items: center; }
     .theme-select { padding: 5px; border-radius: 8px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 14px; outline: none; }
     .icon-btn { font-size: 20px; cursor: pointer; line-height: 1; padding: 5px; border-radius: 50%; background: transparent; border: none; color: var(--text-sub); }
-
     .container { padding: 20px; max-width: 600px; margin: 0 auto; }
-    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); transition: background 0.3s; }
-    
+    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
     label { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; display: block; font-weight: 500; }
-    
     .input-group { position: relative; display: flex; align-items: center; }
-    input, select, textarea { 
-        width: 100%; padding: 12px; font-size: 16px; 
-        border: 1px solid var(--border); border-radius: 12px; 
-        background: var(--input-bg); color: var(--text);
-        transition: all 0.2s; appearance: none;
-    }
-    input:focus, select:focus, textarea:focus { background: var(--card-bg); border-color: var(--primary); outline: none; }
-    
+    input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--input-bg); color: var(--text); outline: none; transition: all 0.2s; appearance: none; }
+    input:focus, select:focus, textarea:focus { background: var(--card-bg); border-color: var(--primary); }
     #amount-input { font-size: 28px; font-weight: bold; color: var(--primary); text-align: right; padding-right: 15px; padding-left: 60px; }
-    
-    .calc-icon { 
-        position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
-        color: var(--primary); font-size: 24px; font-weight: bold;
-        z-index: 2; pointer-events: none;
-    }
-
+    .calc-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 24px; font-weight: bold; z-index: 2; pointer-events: none; }
     .currency-toggle { display: flex; gap: 10px; margin-bottom: 15px; }
     .c-btn { flex: 1; padding: 10px; text-align: center; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-weight: 500; color: var(--text-sub); background: var(--card-bg); transition: 0.2s; }
     .c-btn.active { background: var(--primary-light); color: var(--primary); border-color: var(--primary); font-weight: bold; }
-
     .loading-spin { display: none; width: 16px; height: 16px; border: 2px solid #ddd; border-top: 2px solid var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 10px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-    /* 分帳樣式 */
     .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; }
     .split-tools { display: flex; gap: 8px; font-size: 12px; }
     .tool-btn { cursor: pointer; font-weight: 600; padding: 6px 10px; background: var(--primary-light); color: var(--primary); border-radius: 6px; font-size: 12px; }
-
     .split-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
     .split-row:last-child { border-bottom: none; }
     .user-info { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; overflow: hidden; }
     .user-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-
     .split-input-group { position: relative; width: 100px; }
-    .split-amount { 
-      width: 100% !important; text-align: right; padding: 8px !important; font-size: 15px !important; 
-      border: 1px solid var(--border) !important; border-radius: 8px;
-      background: var(--input-bg) !important; color: var(--text);
-    }
-    .split-amount:focus { background: var(--card-bg) !important; border-color: var(--primary) !important; }
-    .split-amount::placeholder { color: var(--text-sub); font-style: italic; }
-
+    .split-amount { width: 100% !important; text-align: right; padding: 8px !important; font-size: 15px !important; border: 1px solid var(--border) !important; border-radius: 8px; background: var(--input-bg) !important; color: var(--text); }
     .checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; background: var(--card-bg); }
     .checkbox.checked { background: var(--primary); border-color: var(--primary); }
     .checkbox.checked::after { content: '✔'; color: white; font-size: 14px; }
-    
     .footer { position: fixed; bottom: 0; left: 0; width: 100%; padding: 15px 20px; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; z-index: 900; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
     .btn-main { width: 100%; flex: 1; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: 0.2s; }
-    .btn-main:active { transform: scale(0.98); }
-
+    .btn-main:disabled { background-color: #ccc; cursor: not-allowed; }
     .split-summary { text-align: center; margin-bottom: 10px; font-size: 14px; color: var(--text); background: var(--primary-light); padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; }
     .status-ok { color: var(--primary); font-weight: bold; }
     .status-err { color: var(--red); font-weight: bold; }
-
-    /* 計算機樣式 */
     .calc-overlay { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--bg); border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 20px rgba(0,0,0,0.3); transition: bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 1000; padding: 15px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
     .calc-overlay.show { bottom: 0; }
     .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, 1fr); gap: 10px; height: 380px; }
     .calc-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; font-size: 24px; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
-    .calc-btn:active { background: var(--input-bg); }
     .btn-op { background: #ff9f0a; color: white; border: none; }
     .btn-eq { background: var(--primary); color: white; border: none; grid-row: span 2; }
     .btn-ac { background: var(--input-bg); color: var(--text); font-weight: 500; }
@@ -134,68 +77,39 @@
 </div>
 
 <div class="container">
-  
-  <div class="card">
-    <label>日期 & 時間</label>
-    <input type="datetime-local" id="date-input">
-  </div>
-
+  <div class="card"><label>日期 & 時間</label><input type="datetime-local" id="date-input"></div>
   <div class="card">
     <label>品項 <span id="predict-loading" class="loading-spin"></span></label>
     <input type="text" id="item-input" placeholder="輸入內容..." onblur="predictCategory()">
     <label style="margin-top: 15px;">分類</label>
     <select id="category-select"><option>載入中...</option></select>
   </div>
-
   <div class="card">
     <div class="currency-toggle" id="currency-box"></div>
-
     <label>金額</label>
     <div class="input-group">
       <span class="calc-icon">NT$</span>
-      <input type="text" id="amount-input" class="input-readonly" placeholder="0" 
-             readonly onclick="openCalculator()">
+      <input type="text" id="amount-input" class="input-readonly" placeholder="0" readonly onclick="openCalculator()">
     </div>
-
     <div id="twd-convert-row" style="margin-top: 15px; display: none;">
       <label>💳 刷卡通知台幣金額 (選填)</label>
       <input type="number" id="amount-twd-input" placeholder="實際扣款台幣金額" style="background:#fff8e1; border-color:#ffe082; color:#333;">
     </div>
   </div>
-
   <div class="card">
-    <label style="margin-bottom:15px; color:var(--primary); font-size:15px; border-bottom:1px solid var(--border); padding-bottom:5px;">
-        付款與分帳詳情
-    </label>
-    
+    <label style="margin-bottom:15px; color:var(--primary); font-size:15px; border-bottom:1px solid var(--border); padding-bottom:5px;">付款與分帳詳情</label>
     <div style="display:flex; gap:12px; margin-bottom: 5px;">
-      <div style="flex:1">
-        <label>先付錢的人</label>
-        <select id="payer-select"></select>
-      </div>
-      <div style="flex:1">
-        <label>付款方式</label>
-        <select id="payment-select"></select>
-      </div>
+      <div style="flex:1"><label>先付錢的人</label><select id="payer-select"></select></div>
+      <div style="flex:1"><label>付款方式</label><select id="payment-select"></select></div>
     </div>
-
     <div class="split-header">
         <label style="margin:0">如何分帳</label>
-        <div class="split-tools">
-           <div class="tool-btn" onclick="toggleSelectAll()">全選/取消</div>
-           <div class="tool-btn" onclick="toggleSplitMode()">切換手動</div>
-        </div>
+        <div class="split-tools"><div class="tool-btn" onclick="toggleSelectAll()">全選/取消</div><div class="tool-btn" onclick="toggleSplitMode()">切換手動</div></div>
     </div>
-    
-    <div class="split-summary">
-      <span>總額: <span id="total-display">0</span></span>
-      <span id="remainder-display" class="status-ok">分配: 自動計算</span>
-    </div>
-
+    <div class="split-summary"><span>總額: <span id="total-display">0</span></span><span id="remainder-display" class="status-ok">分配: 自動計算</span></div>
     <div id="split-list"></div>
     <textarea id="note-input" rows="2" placeholder="備註..." style="margin-top:15px;"></textarea>
   </div>
-
 </div>
 
 <div id="custom-calculator" class="calc-overlay">
@@ -204,40 +118,32 @@
         <button class="calc-btn btn-ac" onclick="calcAppend('DEL')">⌫</button>
         <button class="calc-btn btn-op" onclick="calcAppend('/')">÷</button>
         <button class="calc-btn btn-op" onclick="calcAppend('*')">×</button>
-
         <button class="calc-btn" onclick="calcAppend('7')">7</button>
         <button class="calc-btn" onclick="calcAppend('8')">8</button>
         <button class="calc-btn" onclick="calcAppend('9')">9</button>
         <button class="calc-btn btn-op" onclick="calcAppend('-')">-</button>
-
         <button class="calc-btn" onclick="calcAppend('4')">4</button>
         <button class="calc-btn" onclick="calcAppend('5')">5</button>
         <button class="calc-btn" onclick="calcAppend('6')">6</button>
         <button class="calc-btn btn-op" onclick="calcAppend('+')">+</button>
-
         <button class="calc-btn" onclick="calcAppend('1')">1</button>
         <button class="calc-btn" onclick="calcAppend('2')">2</button>
         <button class="calc-btn" onclick="calcAppend('3')">3</button>
-        
         <button class="calc-btn btn-eq" style="grid-row: span 2;" onclick="calcDone()">OK</button>
-
         <button class="calc-btn" style="grid-column: span 2" onclick="calcAppend('0')">0</button>
         <button class="calc-btn" onclick="calcAppend('.')">.</button>
      </div>
 </div>
 
-<div class="footer">
-  <button class="btn-main" id="save-btn" onclick="save()">確認儲存</button>
-</div>
-
+<div class="footer"><button class="btn-main" id="save-btn" onclick="save()">確認儲存</button></div>
 <input type="hidden" id="edit-row-index">
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  // 🔴 請務必確認這裡的 LIFF ID 是正確的 (Record 頁面的 ID)
+  // 🔴 請務必填入 ID 和 網址
   const LIFF_ID = "2009010836-bedIz9Jo"; 
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec";
 
-  // 全域變數
   let settings = { members: [], categories: [], payments: [], currency: "TWD" };
   let currentCurrency = "TWD";
   let splitMode = "EVEN"; 
@@ -248,26 +154,19 @@
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('date-input').value = now.toISOString().slice(0,16);
-
     initTheme();
-
     const urlParams = new URLSearchParams(window.location.search);
     targetId = urlParams.get('targetId');
 
     liff.init({ liffId: LIFF_ID }).then(async () => {
         if (!liff.isLoggedIn()) { liff.login(); return; }
-        
         const profile = await liff.getProfile();
         currentUserName = profile.displayName; 
-
-        // 🔥 如果網址沒帶 ID，預設用個人 ID
         if (!targetId) targetId = profile.userId;
-        
         loadData();
     });
   };
 
-  // --- 主題控制 ---
   function initTheme() {
       const savedColor = localStorage.getItem('app-color') || 'green';
       const savedDark = localStorage.getItem('app-dark') === 'true';
@@ -284,28 +183,27 @@
       localStorage.setItem('app-dark', document.body.classList.contains('dark-mode'));
   }
 
+  // 🔥 關鍵修正：改用 fetch
   function loadData() {
     const urlParams = new URLSearchParams(window.location.search);
     const editRow = urlParams.get('row');
     const isPrefill = urlParams.get('mode') === 'prefill';
-    const action = editRow ? 'getEditData' : 'getAllLedgerSettings'; // 🔥 修改：使用正確的後端函式名
+    const action = editRow ? 'getEditData' : 'getAllLedgerSettings';
 
-    // 🔥 使用 google.script.run
-    google.script.run
-      .withSuccessHandler(res => {
-          if(!res) { alert("讀取失敗"); return; }
-          
-          // 如果是編輯模式，資料結構會包在 res.data 和 res.record
-          if (editRow) {
+    fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: action, userId: targetId, row: editRow })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if(!res.success) { alert("讀取失敗"); return; }
+        if (editRow) {
              settings = res.data;
              renderUI();
              fillForm(res.record);
-          } 
-          // 預填模式或新增模式
-          else {
-             settings = res; // getAllLedgerSettings 直接回傳設定物件
+        } else {
+             settings = res.data;
              renderUI();
-             
              if (isPrefill) {
                  fillForm({
                      item: urlParams.get('item'), amount: urlParams.get('amount'),
@@ -314,17 +212,13 @@
                      currency: settings.currency, payer: settings.members[0], split: urlParams.get('split')
                  });
              } else {
-                // 🔥 自動選人
                 const payerSelect = document.getElementById('payer-select');
-                if (settings.members.includes(currentUserName)) {
-                    payerSelect.value = currentUserName;
-                }
+                if (settings.members.includes(currentUserName)) payerSelect.value = currentUserName;
                 toggleSelectAll(true);
              }
-          }
-      })
-      .withFailureHandler(err => alert("連線錯誤: " + err))
-      [action](targetId, editRow); // 🔥 傳入 targetId
+        }
+    })
+    .catch(e => alert("連線錯誤: " + e));
   }
 
   function renderUI() {
@@ -334,14 +228,11 @@
      renderCurrencyUI(settings.currency);
      renderSplitList();
   }
-
   function renderSelect(id, list) {
     const el = document.getElementById(id);
     el.innerHTML = "";
     (list||[]).forEach(i => el.innerHTML += `<option value="${i}">${i}</option>`);
   }
-
-  // ... (保留原本的貨幣 UI 邏輯) ...
   function renderCurrencyUI(mainCurrency) {
     const box = document.getElementById('currency-box');
     box.innerHTML = "";
@@ -350,7 +241,6 @@
     btn1.onclick = () => setCurrency(mainCurrency, btn1);
     box.appendChild(btn1);
     currentCurrency = mainCurrency;
-
     if (mainCurrency !== "TWD") {
         const btn2 = document.createElement('div');
         btn2.className = "c-btn"; btn2.innerText = "TWD";
@@ -359,9 +249,7 @@
     }
     updateTwdInputVisibility();
   }
-
   const currencySymbols = { 'TWD': 'NT$', 'USD': '$', 'JPY': '¥', 'KRW': '₩', 'EUR': '€', 'GBP': '£', 'CNY': '¥', 'THB': '฿', 'VND': '₫' };
-
   function setCurrency(code, btnElement) {
     currentCurrency = code;
     document.querySelectorAll('.c-btn').forEach(b => b.classList.remove('active'));
@@ -370,7 +258,6 @@
     document.querySelector('.calc-icon').innerText = symbol;
     updateTwdInputVisibility();
   }
-
   function updateTwdInputVisibility() {
     const show = (settings.currency !== "TWD" && currentCurrency !== "TWD");
     document.getElementById('twd-convert-row').style.display = show ? 'block' : 'none';
@@ -380,17 +267,17 @@
     const item = document.getElementById('item-input').value.trim();
     if(!item) return;
     document.getElementById('predict-loading').style.display = 'inline-block';
-    
-    // 🔥 使用 google.script.run
-    google.script.run
-      .withSuccessHandler(res => {
+    fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'predictCategory', item: item, categories: settings.categories })
+    })
+    .then(r=>r.json())
+    .then(res => {
          if(res.success && res.category) document.getElementById('category-select').value = res.category;
          document.getElementById('predict-loading').style.display = 'none';
-      })
-      .predictCategory(item, settings.categories);
+    }).catch(()=>{ document.getElementById('predict-loading').style.display = 'none'; });
   }
 
-  // ... (保留原本的分帳邏輯) ...
   function renderSplitList() {
     const list = document.getElementById('split-list');
     const oldHtml = list.innerHTML;
@@ -413,45 +300,34 @@
            <div class="user-name" style="font-size:16px;">${member}</div>
         </div>
         <div class="split-input-group">
-           <input type="number" class="${inputClass}" id="amt-${idx}" 
-                  placeholder="0" value="${existingVal}" 
-                  oninput="onSplitInput(${idx})" onclick="this.select()">
+           <input type="number" class="${inputClass}" id="amt-${idx}" placeholder="0" value="${existingVal}" oninput="onSplitInput(${idx})" onclick="this.select()">
         </div>
       `;
       list.appendChild(row);
     });
     updateSplitMath();
   }
-
   function toggleSplitMode() {
     splitMode = splitMode === "EVEN" ? "CUSTOM" : "EVEN";
     renderSplitList();
   }
-
   function toggleSplitMember(idx) {
     if (splitMode !== "EVEN") return;
     const chk = document.getElementById(`chk-${idx}`);
     chk.classList.toggle('checked');
     if (!chk.classList.contains('checked')) {
         const inp = document.getElementById(`amt-${idx}`);
-        inp.value = "";
-        inp.classList.remove('has-value');
+        inp.value = ""; inp.classList.remove('has-value');
     }
     updateSplitMath();
   }
-
   function onSplitInput(idx) {
     const inp = document.getElementById(`amt-${idx}`);
     const chk = document.getElementById(`chk-${idx}`);
-    if (inp.value !== "") {
-        chk.classList.add('checked');
-        inp.classList.add('has-value');
-    } else {
-        inp.classList.remove('has-value');
-    }
+    if (inp.value !== "") { chk.classList.add('checked'); inp.classList.add('has-value'); } 
+    else { inp.classList.remove('has-value'); }
     updateSplitMath();
   }
-
   function toggleSelectAll(forceSelect = null) {
     if (splitMode !== "EVEN") return;
     const allChecks = document.querySelectorAll('.checkbox');
@@ -459,37 +335,31 @@
     if (forceSelect === null) {
        const allChecked = Array.from(allChecks).every(c => c.classList.contains('checked'));
        shouldSelectAll = !allChecked;
-    } else {
-       shouldSelectAll = forceSelect;
-    }
+    } else shouldSelectAll = forceSelect;
+    
     allChecks.forEach((c, i) => {
        if(shouldSelectAll) c.classList.add('checked');
        else {
            c.classList.remove('checked');
            const inp = document.getElementById(`amt-${i}`);
-           inp.value = "";
-           inp.classList.remove('has-value');
+           inp.value = ""; inp.classList.remove('has-value');
        }
     });
     updateSplitMath();
   }
-
   function resetSplit() {
     settings.members.forEach((m, i) => {
        document.getElementById(`chk-${i}`).classList.add('checked');
        const inp = document.getElementById(`amt-${i}`);
-       inp.value = "";
-       inp.classList.remove('has-value');
+       inp.value = ""; inp.classList.remove('has-value');
     });
     splitMode = "EVEN";
     updateSplitMath();
   }
-
   function updateSplitMath() {
     const total = parseFloat(document.getElementById('amount-input').value) || 0;
     document.getElementById('total-display').innerText = total;
-    let manualSum = 0;
-    let autoCount = 0;
+    let manualSum = 0; let autoCount = 0;
     settings.members.forEach((m, i) => {
        const chk = document.getElementById(`chk-${i}`);
        const inp = document.getElementById(`amt-${i}`);
@@ -518,21 +388,16 @@
         else { infoEl.innerText = `剩餘 ${remaining} 給 ${autoCount} 人均分`; infoEl.className = "status-ok"; }
     }
   }
-
   function getSplitText() {
-    let hasManualInput = false;
-    let checkedCount = 0;
-    const totalMembers = settings.members.length;
+    let hasManualInput = false; let checkedCount = 0;
     settings.members.forEach((m, i) => {
         if (document.getElementById(`amt-${i}`).value !== "") hasManualInput = true;
         if (document.getElementById(`chk-${i}`).classList.contains('checked')) checkedCount++;
     });
-    if (checkedCount === totalMembers && !hasManualInput) return "均分";
+    if (checkedCount === settings.members.length && !hasManualInput) return "均分";
     if (checkedCount === 1 && !hasManualInput) {
         let name = "";
-        settings.members.forEach((m, i) => {
-            if (document.getElementById(`chk-${i}`).classList.contains('checked')) name = m;
-        });
+        settings.members.forEach((m, i) => { if (document.getElementById(`chk-${i}`).classList.contains('checked')) name = m; });
         return "都" + name + "的";
     }
     if (checkedCount === 0) return "";
@@ -540,22 +405,15 @@
     settings.members.forEach((m, i) => {
         const chk = document.getElementById(`chk-${i}`);
         const inp = document.getElementById(`amt-${i}`);
-        const valStr = inp.value;
         if (chk.classList.contains('checked')) {
-            if (valStr !== "") parts.push(`${m}的${valStr}`);
-        } else {
-            parts.push(`${m}的0`);
-        }
+            parts.push(`${m}的${inp.value || 0}`);
+        } else { parts.push(`${m}的0`); }
     });
     return parts.join("、");
   }
-
   function fillForm(record) {
-     if (window.location.search.indexOf('row=') > -1) {
-         document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
-     } else {
-         document.getElementById('edit-row-index').value = ""; 
-     }
+     if (window.location.search.indexOf('row=') > -1) document.getElementById('edit-row-index').value = window.location.search.split('row=')[1];
+     else document.getElementById('edit-row-index').value = ""; 
      if (record.date) {
          try {
              let dateStr = decodeURIComponent(record.date).replace(" ", "T"); 
@@ -564,7 +422,7 @@
                  dateObj.setMinutes(dateObj.getMinutes() - dateObj.getTimezoneOffset());
                  document.getElementById('date-input').value = dateObj.toISOString().slice(0,16);
              }
-         } catch (e) { console.error("日期解析失敗", e); }
+         } catch (e) {}
      }
      document.getElementById('item-input').value = record.item;
      document.getElementById('amount-input').value = record.amount;
@@ -577,7 +435,6 @@
      const btns = document.querySelectorAll('.c-btn');
      if (isTwd && btns.length > 1) setCurrency('TWD', btns[1]);
      else setCurrency(record.currency, btns[0]);
-
      if(record.amountTWD) document.getElementById('amount-twd-input').value = record.amountTWD;
 
      const splitText = record.split || "";
@@ -587,9 +444,7 @@
      else if (splitText.startsWith("都") && splitText.endsWith("的")) {
         const name = splitText.substring(1, splitText.length - 1);
         toggleSelectAll(false);
-        settings.members.forEach((m, i) => {
-            if (m === name) document.getElementById(`chk-${i}`).classList.add('checked');
-        });
+        settings.members.forEach((m, i) => { if (m === name) document.getElementById(`chk-${i}`).classList.add('checked'); });
      } else {
         splitMode = "CUSTOM"; toggleSelectAll(false);
         const parts = splitText.split("、");
@@ -609,18 +464,16 @@
      }
      updateSplitMath();
   }
-
-  // --- 計算機邏輯 (保持不變) ---
   function openCalculator() { document.getElementById('custom-calculator').classList.add('show'); const el = document.getElementById('amount-input'); if(el.value === "0") el.value = ""; }
   function closeCalculator() { document.getElementById('custom-calculator').classList.remove('show'); }
   function calcAppend(val) {
     const el = document.getElementById('amount-input');
-    if (val === 'AC') { el.value = ""; } 
-    else if (val === 'DEL') { el.value = el.value.slice(0, -1); } 
+    if (val === 'AC') el.value = ""; 
+    else if (val === 'DEL') el.value = el.value.slice(0, -1); 
     else {
       const lastChar = el.value.slice(-1);
       const isOp = ['+','-','*','/'].includes(val);
-      if (isOp && ['+','-','*','/'].includes(lastChar)) { el.value = el.value.slice(0, -1) + val; } else { el.value += val; }
+      if (isOp && ['+','-','*','/'].includes(lastChar)) el.value = el.value.slice(0, -1) + val; else el.value += val;
     }
   }
   function calcDone() {
@@ -629,7 +482,7 @@
       if (el.value) {
         let safeValue = el.value.replace(/[+\-*/]*$/, '');
         const result = new Function('return ' + safeValue)(); 
-        if (!isFinite(result) || isNaN(result)) { el.value = "0"; } else { el.value = Math.round(result * 100) / 100; }
+        if (!isFinite(result) || isNaN(result)) el.value = "0"; else el.value = Math.round(result * 100) / 100;
         updateSplitMath(); 
       }
     } catch (e) { alert("算式錯誤"); el.value = ""; }
@@ -655,19 +508,22 @@
     const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.innerText = "儲存中...";
 
-    // 🔥 使用 google.script.run
-    google.script.run
-      .withSuccessHandler(res => {
-         if(res.success) {
-             liff.sendMessages([{ type: 'text', text: "✅ 記帳完成" }])
-                 .then(() => liff.closeWindow())
-                 .catch(() => liff.closeWindow());
-         } else { 
-             alert("儲存失敗: " + res.error); btn.disabled = false; btn.innerText = "確認儲存"; 
-         }
-      })
-      .withFailureHandler(err => { alert("錯誤: " + err); btn.disabled = false; btn.innerText = "確認儲存"; })
-      .saveTransaction(targetId, payload); // 🔥 傳入 targetId
+    // 🔥 改用 fetch
+    fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'saveTransaction', userId: targetId, data: payload, useCache: true })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if(res.success) {
+            liff.sendMessages([{ type: 'text', text: "✅ 記帳完成" }])
+                .then(() => liff.closeWindow())
+                .catch(() => liff.closeWindow());
+        } else { 
+            alert("儲存失敗: " + res.error); btn.disabled = false; btn.innerText = "確認儲存"; 
+        }
+    })
+    .catch(e => { alert("錯誤: " + e); btn.disabled = false; btn.innerText = "確認儲存"; });
   }
 </script>
 </body>
