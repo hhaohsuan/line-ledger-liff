@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>帳本設定</title>
   <style>
-    /* ✅ 1. 全域與主題變數 (完全複製 Record 頁面的風格) */
+    /* --- 全域設定 --- */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     :root {
@@ -30,11 +30,10 @@
 
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; color: var(--text); transition: background 0.3s, color 0.3s; }
 
-    /* Header (含設定按鈕區) */
+    /* Header */
     .header { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 1px 0 var(--border); position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s; }
     .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
     
-    /* 🟢 新增：右上角設定區塊樣式 */
     .settings-area { display: flex; gap: 10px; align-items: center; }
     .theme-select { padding: 5px; border-radius: 8px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 14px; outline: none; }
     .icon-btn { font-size: 20px; cursor: pointer; padding: 5px; border: none; background: transparent; color: var(--text-sub); line-height: 1; }
@@ -73,23 +72,42 @@
     .footer { position: fixed; bottom: 0; left: 0; width: 100%; padding: 15px 20px; background: var(--card-bg); border-top: 1px solid var(--border); display: flex; z-index: 900; padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
     .btn-main { width: 100%; flex: 1; background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: 0.2s; }
     .btn-main:active { transform: scale(0.98); }
+    .btn-main:disabled { background-color: #ccc; box-shadow: none; cursor: not-allowed; }
 
     /* Loading */
     .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.3s; }
     .spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* --- 🔥 新增：成員暱稱頁面專用樣式 --- */
+    .hidden { display: none !important; } /* 切換頁面用 */
+    
+    .member-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .member-row:last-child { border-bottom: none; }
+    
+    .avatar { width: 40px; height: 40px; background: var(--input-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--text-sub); margin-right: 12px; font-size: 16px; flex-shrink: 0; border: 1px solid var(--border); }
+    
+    .info { flex: 1; min-width: 0; }
+    .line-name { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+    .line-name .status { margin-right: 5px; font-size: 10px; }
+    
+    input.nick-input { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; background: var(--card-bg); outline: none; transition: border 0.2s; }
+    input.nick-input:focus { border-color: var(--primary); }
+    
+    .btn-cancel { width: 100%; background: transparent; color: var(--text-sub); border: none; padding: 10px; font-size: 14px; cursor: pointer; margin-top: 5px; }
+
   </style>
 </head>
 <body>
 
 <div id="loading" class="loading-overlay">
   <div class="spinner"></div>
-  <p style="margin-top:15px; color:var(--text-sub);">載入設定中...</p>
+  <p id="loading-text" style="margin-top:15px; color:var(--text-sub);">載入中...</p>
 </div>
 
 <div class="header">
   <div class="icon-btn" onclick="liff.closeWindow()">✕</div>
-  <h1>帳本設定</h1>
+  <h1 id="page-title">帳本設定</h1>
   <div class="settings-area">
       <select id="theme-select" class="theme-select" onchange="changeColor(this.value)">
           <option value="green">綠色</option>
@@ -103,144 +121,198 @@
 </div>
 
 <div class="container">
-  
-  <div class="card">
-    <label>帳本名稱 (顯示於卡片)</label>
-    <input type="text" id="ledger-name" placeholder="例如：我的記帳本">
+
+  <div id="page-general">
+      <div class="card">
+        <label>帳本名稱 (顯示於卡片)</label>
+        <input type="text" id="ledger-name" placeholder="例如：我的記帳本">
+      </div>
+
+      <div class="card">
+        <label>預設幣別</label>
+        <select id="currency-select" onchange="onCurrencyChange()">
+            <option value="TWD">TWD (新台幣)</option>
+            <option value="JPY">JPY (日圓)</option>
+            <option value="USD">USD (美元)</option>
+            <option value="EUR">EUR (歐元)</option>
+            <option value="KRW">KRW (韓元)</option>
+            <option value="CNY">CNY (人民幣)</option>
+            <option value="THB">THB (泰銖)</option>
+            <option value="OTHER">自行輸入...</option>
+        </select>
+        <input type="text" id="currency-other" placeholder="輸入代碼 (如 GBP)" style="display:none; margin-top:10px;" onblur="updateRateFromOther()">
+      </div>
+
+      <div class="card">
+        <label>匯率 (對台幣)</label>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <input type="number" id="rate" step="0.0001" placeholder="1.0">
+            <span id="fetching-msg" style="font-size:12px; color:var(--primary); display:none;">🔄 更新中...</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-sub); margin-top:5px;">* 選擇幣別後會嘗試自動抓取匯率</div>
+      </div>
+
+      <div class="card">
+        <label>成員名單 (用於分帳)</label>
+        <div id="members-tags" class="tags-container"></div>
+        <div class="input-row">
+           <input type="text" id="new-member" placeholder="輸入名字...">
+           <button class="btn-add" onclick="add('members-tags', 'new-member', 13)">＋</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <label>消費分類</label>
+        <div id="categories-tags" class="tags-container"></div>
+        <div class="input-row">
+           <input type="text" id="new-category" placeholder="輸入分類...">
+           <button class="btn-add" onclick="add('categories-tags', 'new-category', 15)">＋</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <label>付款方式</label>
+        <div id="payments-tags" class="tags-container"></div>
+        <div class="input-row">
+           <input type="text" id="new-payment" placeholder="輸入方式...">
+           <button class="btn-add" onclick="add('payments-tags', 'new-payment', 10)">＋</button>
+        </div>
+      </div>
+      
+      <div class="footer">
+        <button class="btn-main" id="save-btn" onclick="saveGeneral()">儲存設定</button>
+      </div>
   </div>
 
-  <div class="card">
-    <label>預設幣別</label>
-    <select id="currency-select" onchange="onCurrencyChange()">
-        <option value="TWD">TWD (新台幣)</option>
-        <option value="JPY">JPY (日圓)</option>
-        <option value="USD">USD (美元)</option>
-        <option value="EUR">EUR (歐元)</option>
-        <option value="KRW">KRW (韓元)</option>
-        <option value="CNY">CNY (人民幣)</option>
-        <option value="THB">THB (泰銖)</option>
-        <option value="OTHER">自行輸入...</option>
-    </select>
-    <input type="text" id="currency-other" placeholder="輸入代碼 (如 GBP)" style="display:none; margin-top:10px;" onblur="updateRateFromOther()">
-  </div>
-
-  <div class="card">
-    <label>匯率 (對台幣)</label>
-    <div style="display:flex; align-items:center; gap:10px;">
-        <input type="number" id="rate" step="0.0001" placeholder="1.0">
-        <span id="fetching-msg" style="font-size:12px; color:var(--primary); display:none;">🔄 更新中...</span>
+  <div id="page-member" class="hidden">
+    <div class="card">
+      <label style="color:var(--primary); font-size:16px; margin-bottom:10px;">成員暱稱設定</label>
+      <p style="font-size:13px; color:var(--text-sub); margin-bottom:15px; line-height:1.5;">
+        設定「顯示名稱」後，記帳與分帳時將優先顯示此名稱。<br>
+        (若留空，則顯示原本的 LINE 名稱)
+      </p>
+      
+      <div id="member-list-container">
+        </div>
     </div>
-    <div style="font-size:12px; color:var(--text-sub); margin-top:5px;">* 選擇幣別後會嘗試自動抓取匯率</div>
-  </div>
 
-  <div class="card">
-    <label>成員名單 (用於分帳)</label>
-    <div id="members-tags" class="tags-container"></div>
-    <div class="input-row">
-       <input type="text" id="new-member" placeholder="輸入名字...">
-       <button class="btn-add" onclick="add('members-tags', 'new-member', 13)">＋</button>
+    <div class="footer" style="flex-direction:column; gap:0;">
+      <button class="btn-main" id="save-member-btn" onclick="saveMemberMapping()">儲存暱稱</button>
+      <button class="btn-cancel" onclick="switchPage('general')">回上一頁</button>
     </div>
   </div>
 
-  <div class="card">
-    <label>消費分類</label>
-    <div id="categories-tags" class="tags-container"></div>
-    <div class="input-row">
-       <input type="text" id="new-category" placeholder="輸入分類...">
-       <button class="btn-add" onclick="add('categories-tags', 'new-category', 15)">＋</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <label>付款方式</label>
-    <div id="payments-tags" class="tags-container"></div>
-    <div class="input-row">
-       <input type="text" id="new-payment" placeholder="輸入方式...">
-       <button class="btn-add" onclick="add('payments-tags', 'new-payment', 10)">＋</button>
-    </div>
-  </div>
-
-</div>
-
-<div class="footer">
-  <button class="btn-main" id="save-btn" onclick="save()">儲存設定</button>
 </div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-  // 🔴 請確認 LIFF_ID (Settings 的 ID)
+  // 🔴 請務必確認這裡的 LIFF ID 是正確的 (Settings 頁面的 ID)
   const LIFF_ID = "2009010836-1OaNzGM2"; 
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwgI2bbO-8SU94pv-G7BU2MBHS2j6BjzTxFgC3YcX0bv0KLHROsi8mRaJ3FiuiefMB1/exec";
 
-  let settingsData = { members: [], categories: [], payments: [], currency: "TWD", ledgerName: "" };
-  let currentUserId = "";
+  // 全域變數
+  let gTargetId = "";
+  let gSettings = { members: [], categories: [], payments: [], currency: "TWD", ledgerName: "" };
+  let gMembersMap = []; // 用於暱稱設定
 
   window.onload = function() {
-    // 3. 🟢 新增：初始化主題 (讀取 Record 頁面存的設定)
+    // 1. 初始化主題
     initTheme();
 
+    // 2. 抓取網址參數 (判斷是要顯示哪一頁)
+    const urlParams = new URLSearchParams(window.location.search);
+    gTargetId = urlParams.get('targetId');
+    const page = urlParams.get('page'); 
+
+    // 3. 切換頁面 UI
+    if (page === 'member') {
+       switchPage('member');
+    } else {
+       switchPage('general');
+    }
+
     // 4. LIFF 初始化
-    liff.init({ liffId: LIFF_ID }).then(() => {
+    liff.init({ liffId: LIFF_ID }).then(async () => {
       if (!liff.isLoggedIn()) { liff.login(); return; }
-      liff.getProfile().then(profile => {
-        currentUserId = profile.userId;
-        loadSettings();
-      });
+      
+      const profile = await liff.getProfile();
+      
+      // 🔥 重點：如果網址沒帶 ID，預設使用個人 ID
+      if (!gTargetId) gTargetId = profile.userId;
+
+      // 5. 呼叫後端載入資料
+      if (page === 'member') {
+          // 呼叫後端: 讀取成員對照表
+          fetchData('getMemberMapping', renderMemberPage);
+      } else {
+          // 呼叫後端: 讀取一般設定
+          fetchData('getAllLedgerSettings', renderGeneralPage); 
+      }
+
     }).catch(err => {
-      alert("LIFF Init Error: " + err);
+      alert("LIFF Error: " + err);
     });
   };
 
-  // 🟢 5. 新增：主題控制邏輯 (與 Record 頁面共用 localStorage)
+  // --- 通用工具 ---
+  
+  // 切換頁面 UI
+  function switchPage(pageName) {
+     if (pageName === 'member') {
+         document.getElementById('page-general').classList.add('hidden');
+         document.getElementById('page-member').classList.remove('hidden');
+         document.getElementById('page-title').innerText = "成員暱稱設定";
+         document.getElementById('loading-text').innerText = "載入成員中...";
+     } else {
+         document.getElementById('page-general').classList.remove('hidden');
+         document.getElementById('page-member').classList.add('hidden');
+         document.getElementById('page-title').innerText = "帳本設定";
+         document.getElementById('loading-text').innerText = "載入設定中...";
+     }
+  }
+
+  // 統一呼叫後端 (使用 google.script.run，比 fetch 更穩定)
+  function fetchData(serverFunctionName, callback) {
+     google.script.run
+       .withSuccessHandler(callback)
+       .withFailureHandler(err => { alert("讀取失敗: " + err); document.getElementById('loading').style.display = 'none'; })
+       [serverFunctionName](gTargetId); // 🔥 傳入 gTargetId
+  }
+
+  // --- 主題控制 ---
   function initTheme() {
       const savedColor = localStorage.getItem('app-color') || 'green';
       const savedDark = localStorage.getItem('app-dark') === 'true';
-      
-      // 套用顏色
       document.body.setAttribute('data-color', savedColor);
       document.getElementById('theme-select').value = savedColor;
-      
-      // 套用暗黑模式
       if (savedDark) document.body.classList.add('dark-mode');
   }
-
   function changeColor(color) {
       document.body.setAttribute('data-color', color);
       localStorage.setItem('app-color', color);
   }
-
   function toggleDarkMode() {
       document.body.classList.toggle('dark-mode');
-      const isDark = document.body.classList.contains('dark-mode');
-      localStorage.setItem('app-dark', isDark);
+      localStorage.setItem('app-dark', document.body.classList.contains('dark-mode'));
   }
 
-  function loadSettings() {
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'getSettings', userId: currentUserId })
-    })
-    .then(r => r.json())
-    .then(res => {
-      if(res.success) {
-        settingsData = res.data;
-        document.getElementById('ledger-name').value = settingsData.ledgerName || "";
-        
-        // 設定幣別選單
-        setCurrencyUI(settingsData.currency || "TWD");
-        document.getElementById('rate').value = settingsData.rate || 1;
-        
-        renderTags('members-tags', settingsData.members);
-        renderTags('categories-tags', settingsData.categories);
-        renderTags('payments-tags', settingsData.payments);
-        
-        document.getElementById('loading').style.opacity = '0';
-        setTimeout(() => document.getElementById('loading').style.display = 'none', 300);
-      } else {
-        alert("讀取失敗: " + res.error);
-      }
-    })
-    .catch(e => alert("連線錯誤: " + e));
+  // ==========================================
+  // 🟢 邏輯 A: 一般設定 (General Settings)
+  // ==========================================
+  
+  function renderGeneralPage(data) {
+    if (!data) { alert("讀取不到帳本資料"); return; }
+    
+    gSettings = data;
+    document.getElementById('ledger-name').value = gSettings.ledgerName || "";
+    
+    setCurrencyUI(gSettings.currency || "TWD");
+    document.getElementById('rate').value = gSettings.rate || 1;
+    
+    renderTags('members-tags', gSettings.members);
+    renderTags('categories-tags', gSettings.categories);
+    renderTags('payments-tags', gSettings.payments);
+    
+    hideLoading();
   }
 
   function renderTags(containerId, list) {
@@ -278,67 +350,14 @@
   };
 
   function getListByContainer(id) {
-     if(id === 'members-tags') return settingsData.members;
-     if(id === 'categories-tags') return settingsData.categories;
-     if(id === 'payments-tags') return settingsData.payments;
+     if(id === 'members-tags') return gSettings.members;
+     if(id === 'categories-tags') return gSettings.categories;
+     if(id === 'payments-tags') return gSettings.payments;
      return [];
   }
 
-  // --- 匯率相關功能 ---
-  function onCurrencyChange() {
-    var select = document.getElementById('currency-select');
-    var otherInput = document.getElementById('currency-other');
-    var val = select.value;
-
-    if (val === "OTHER") {
-      otherInput.style.display = "block";
-      otherInput.value = "";
-      otherInput.focus();
-    } else {
-      otherInput.style.display = "none";
-      updateRate(val);
-    }
-  }
-
-  function updateRateFromOther() {
-    var val = document.getElementById('currency-other').value.toUpperCase();
-    if (val.length === 3) updateRate(val);
-  }
-
-  function updateRate(code) {
-    if (!code || code === "TWD") {
-       document.getElementById('rate').value = 1;
-       return;
-    }
-    document.getElementById('fetching-msg').style.display = "inline";
-    fetch('https://api.exchangerate-api.com/v4/latest/' + code)
-      .then(res => res.json())
-      .then(data => {
-         var rateToTwd = data.rates.TWD;
-         if (rateToTwd) document.getElementById('rate').value = rateToTwd;
-      })
-      .catch(() => {})
-      .finally(() => { document.getElementById('fetching-msg').style.display = "none"; });
-  }
-
-  function setCurrencyUI(savedCurrency) {
-     var select = document.getElementById('currency-select');
-     var otherInput = document.getElementById('currency-other');
-     var exists = false;
-     for (var i = 0; i < select.options.length; i++) {
-        if (select.options[i].value === savedCurrency) { exists = true; break; }
-     }
-     if (exists) {
-        select.value = savedCurrency;
-        otherInput.style.display = "none";
-     } else {
-        select.value = "OTHER";
-        otherInput.style.display = "block";
-        otherInput.value = savedCurrency;
-     }
-  }
-
-  function save() {
+  // 儲存一般設定
+  function saveGeneral() {
     const btn = document.getElementById('save-btn');
     btn.disabled = true; btn.innerText = "儲存中...";
 
@@ -350,29 +369,120 @@
        ledgerName: document.getElementById('ledger-name').value,
        currency: finalCurrency,
        rate: document.getElementById('rate').value,
-       members: settingsData.members,
-       categories: settingsData.categories,
-       payments: settingsData.payments
+       members: gSettings.members,
+       categories: gSettings.categories,
+       payments: gSettings.payments
     };
 
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveSettings', userId: currentUserId, data: payload })
-    })
-    .then(r => r.json())
-    .then(res => {
-       if(res.success) {
-          alert("✅ 設定已更新！\n(請重新開啟記帳頁面以套用新設定)");
-          liff.closeWindow();
-       } else {
-          alert("儲存失敗: " + res.error);
-          btn.disabled = false; btn.innerText = "儲存設定";
-       }
-    })
-    .catch(e => {
-       alert("錯誤: " + e);
-       btn.disabled = false; btn.innerText = "儲存設定";
-    });
+    // 🔥 使用 google.script.run 呼叫後端 saveAllLedgerSettings
+    google.script.run
+      .withSuccessHandler(() => {
+         alert("✅ 設定已更新！");
+         liff.closeWindow();
+      })
+      .withFailureHandler(err => {
+         alert("儲存失敗: " + err);
+         btn.disabled = false; btn.innerText = "儲存設定";
+      })
+      .saveAllLedgerSettings(gTargetId, payload); // 傳入 gTargetId
+  }
+
+  // ==========================================
+  // 🔵 邏輯 B: 成員暱稱設定 (Member Nicknames)
+  // ==========================================
+
+  function renderMemberPage(data) {
+     gMembersMap = data; // [{userId, lineName, nickname}]
+     var container = document.getElementById('member-list-container');
+     container.innerHTML = "";
+     
+     if (!data || data.length === 0) {
+        container.innerHTML = "<div style='text-align:center; padding:20px; color:#999;'>尚無成員資料<br>請先邀請成員加入</div>";
+     } else {
+        data.forEach((m, idx) => {
+          var div = document.createElement('div');
+          div.className = 'member-row';
+          
+          // 判斷是否有連結 UserID (綠燈表示有綁定，白燈表示純文字成員)
+          var statusIcon = m.userId ? "🟢" : "⚪"; 
+          
+          div.innerHTML = `
+            <div class="avatar">${m.lineName.charAt(0)}</div>
+            <div class="info">
+              <div class="line-name"><span class="status">${statusIcon}</span>LINE: ${m.lineName}</div>
+              <input type="text" class="nick-input" placeholder="設定顯示暱稱..." 
+                     value="${m.nickname || ''}" 
+                     onchange="updateNick(${idx}, this.value)">
+            </div>
+          `;
+          container.appendChild(div);
+        });
+     }
+     hideLoading();
+  }
+
+  function updateNick(idx, val) {
+     gMembersMap[idx].nickname = val.trim();
+  }
+
+  function saveMemberMapping() {
+     var btn = document.getElementById('save-member-btn');
+     btn.disabled = true; btn.innerText = "儲存中...";
+     
+     // 🔥 使用 google.script.run 呼叫後端 saveMemberMapping
+     google.script.run
+       .withSuccessHandler((res) => {
+          if(res && res.success) {
+             alert("✅ 暱稱已更新！\n(帳本成員名單已同步)");
+             liff.closeWindow();
+          } else {
+             alert("❌ 儲存失敗: " + (res ? res.error : "未知錯誤"));
+             btn.disabled = false; btn.innerText = "儲存暱稱";
+          }
+       })
+       .withFailureHandler(err => {
+          alert("連線失敗: " + err);
+          btn.disabled = false; btn.innerText = "儲存暱稱";
+       })
+       .saveMemberMapping(gTargetId, gMembersMap); // 傳入 gTargetId
+  }
+
+  // --- 輔助：匯率UI ---
+  function onCurrencyChange() {
+    var select = document.getElementById('currency-select');
+    var otherInput = document.getElementById('currency-other');
+    if (select.value === "OTHER") {
+      otherInput.style.display = "block"; otherInput.value = ""; otherInput.focus();
+    } else {
+      otherInput.style.display = "none"; updateRate(select.value);
+    }
+  }
+  function updateRateFromOther() {
+    var val = document.getElementById('currency-other').value.toUpperCase();
+    if (val.length === 3) updateRate(val);
+  }
+  function updateRate(code) {
+    if (!code || code === "TWD") { document.getElementById('rate').value = 1; return; }
+    document.getElementById('fetching-msg').style.display = "inline";
+    fetch('https://api.exchangerate-api.com/v4/latest/' + code)
+      .then(res => res.json())
+      .then(data => { if(data.rates.TWD) document.getElementById('rate').value = data.rates.TWD; })
+      .catch(() => {})
+      .finally(() => { document.getElementById('fetching-msg').style.display = "none"; });
+  }
+  function setCurrencyUI(savedCurrency) {
+     var select = document.getElementById('currency-select');
+     var otherInput = document.getElementById('currency-other');
+     var exists = Array.from(select.options).some(o => o.value === savedCurrency);
+     if (exists) {
+        select.value = savedCurrency; otherInput.style.display = "none";
+     } else {
+        select.value = "OTHER"; otherInput.style.display = "block"; otherInput.value = savedCurrency;
+     }
+  }
+  function hideLoading() {
+      document.getElementById('loading').style.opacity = '0';
+      setTimeout(() => document.getElementById('loading').style.display = 'none', 300);
   }
 </script>
 </body>
